@@ -39,6 +39,7 @@ jobs:
           node --check desktop/preload.js
           node --check desktop/chrome.js
           node --check desktop/browser-core.js
+          node --check desktop/download-core.js
       - name: Check offline behavior
         run: node --test tests/sw.test.cjs
       - name: Check desktop browser core
