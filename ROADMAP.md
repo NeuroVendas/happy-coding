@@ -1,38 +1,65 @@
 # Happy Coding =] — próximos passos
 
-Direção confirmada pelo usuário: navegador funcional para programadores/game devs, com ferramentas úteis, IA e comunidade. Custo zero como prioridade e segurança das pessoas como limite.
+Direção confirmada: navegador/workspace funcional para programadores, game devs, estudantes e criadores, com ferramentas úteis, IA, comunidade e versão desktop. Custo zero como prioridade e segurança como requisito.
 
-## Entregue neste ciclo
+## Estado concluído em 2026-09-08
 
-- Tema original grafite/verde-lima recuperado a partir do protótipo.
-- Favoritos e histórico com listas e remoção; navegação interna com URLs e controles Voltar/Avançar; navegação móvel e atalhos para ferramentas.
-- Comunidade conectada ao Supabase: feed público, filtros, envios de código/projetos/conversas, copiar código, excluir o próprio post e revisão manual.
-- Permissões no servidor: sem publicação direta por usuários; revisão depende de membro admin com MFA/AAL2.
+- Tema original grafite/verde-lima preservado. Não redesenhar sem pedido explícito.
+- Comunidade conectada ao Supabase com RLS, posts pendentes, moderação admin + MFA/AAL2 e denúncias.
+- Conta principal separada da Comunidade em `account.html`.
+- Existe 1 conta real confirmada, 1 fator MFA verificado e 1 membro admin.
+- `admin-suite` aplicada no Supabase (`20260908214303`): diretório, sanções, anúncios, eventos e audit log.
+- Testes transacionais com rollback passaram para timeout, ban, remoção de sanção, bloqueio de post/denúncia, proteção contra auto-sanção, anúncios/eventos públicos e audit log.
+- `project_sync_notes` aplicada (`20260908214414`): `hc_projects.notes` + `updated_at`.
+- RLS das notas testada: dono lê/edita; outro usuário não lê nem altera; limite de 20.000 caracteres confirmado.
+- `account-sync.js` agora sincroniza perfil, favoritos, projetos e notas quando o usuário ativa a sincronização.
+- `bootstrap-admin` foi fechado permanentemente na versão 2: sem código/hash antigo e sem uso de `service_role`; responde `bootstrap_closed`.
+- O service worker foi elevado para cache `v7` após a mudança do shell.
 
-## Pendências para abrir a comunidade a mais pessoas
+## Próximas prioridades
 
-1. Concluir e validar envio de confirmação/recuperação por e-mail e redirects para `https://neurovendas.github.io/happy-coding/`. Não remover confirmação de e-mail como atalho.
-2. Desenvolvedor criar conta, verificar identidade e associar essa conta a `hc_admin_members`; configurar TOTP na tela Minha conta. Nenhuma conta ganha admin pelo nome nem por ser a primeira.
-3. Fazer um teste real de cadastro → confirmação → envio → revisão → leitura por outra pessoa. Testes de RLS já passaram com fixtures revertidas, mas não comprovam entrega de e-mail.
-4. Definir rotina de revisão e critérios claros para conteúdo permitido. Adicionar denúncias, medidas contra abuso e política de privacidade antes de ampliar a distribuição.
+### 1. Fechar o ciclo de conta/sincronização
 
-## Ferramentas e IA
+- Testar sincronização real em dois navegadores/dispositivos com a conta existente.
+- Validar conflitos de notas/projetos entre dois dispositivos e definir estratégia explícita de resolução.
+- Manter sincronização opt-in; histórico continua local.
+- Revisar exportação dos dados sincronizados.
+- Habilitar proteção contra senhas vazadas no Supabase Auth quando houver ferramenta/configuração disponível; hoje o Security Advisor mostra esse único aviso.
 
-- Editor de arquivos por projeto, com salvamento local, exportação e prévia isolada. Não executar código na origem que guarda as sessões de conta.
-- Oferecer ao usuário a escolha explícita de quais arquivos/trechos compartilhar com o assistente.
-- Melhorar compatibilidade e mensagens de progresso da IA local. Modelo continua opcional; não baixar automaticamente.
-- Login opcional para sincronização; projetos locais não devem ser enviados silenciosamente.
+### 2. Admin mais forte
 
-## Navegador desktop real
+- Criar suspensão GLOBAL server-side da conta, separada de timeout/ban da comunidade.
+- Exigir admin + MFA/AAL2 para suspensão e reversão.
+- Registrar suspensão/reversão no audit log.
+- Melhorar tratamento de erros no painel admin para nunca mostrar sucesso quando uma operação falhar.
+- Continuar evoluindo denúncias, rotina de revisão, eventos e anúncios.
 
-O site/PWA é o workspace web. Ele não controla páginas abertas em outras abas do navegador hospedeiro.
+### 3. Editor / workspace real
 
-A próxima etapa de navegador exige um projeto desktop para Windows, inicialmente, com motor web mantido e:
+- Editor de arquivos por projeto.
+- Arquivos e snippets salvos com segurança.
+- Preview web isolado/sandboxed.
+- Importar/exportar projetos sem executar código automaticamente.
+- IA recebe somente arquivos/trechos escolhidos explicitamente pelo usuário.
 
-- abas, endereços, voltar/avançar e downloads reais;
-- interface privilegiada separada das páginas externas;
-- permissões de câmera/microfone/localização negadas por padrão e solicitadas por origem;
-- bloqueio de navegação/downloads aplicado fora do JavaScript das páginas;
-- atualização segura, armazenamento de credenciais e teste do instalador no Windows.
+### 4. IA =]
 
-Não chamar um iframe ou link externo de navegador completo. Não prometer filtragem perfeita da internet. O caminho desktop deve manter o visual e reutilizar comunidade/ferramentas sem expor permissões do sistema ao conteúdo web.
+- Melhorar progresso e compatibilidade da IA local.
+- Melhorar ajuda com erros, código e contexto do projeto escolhido.
+- Nunca baixar modelo automaticamente nem acessar arquivos sem seleção explícita.
+
+### 5. Navegador desktop real
+
+A base Electron em `/desktop` continua sendo o caminho para um browser Windows real.
+
+Pendências:
+- abas múltiplas reais;
+- downloads seguros;
+- histórico/favoritos integrados;
+- filtros no processo principal;
+- testes Windows;
+- instalador e atualização segura.
+
+## Regra permanente
+
+Não chamar o PWA de navegador desktop completo. Não prometer filtragem perfeita da internet. Não ativar serviços pagos, domínio, SMS ou APIs pagas sem aprovação explícita.
