@@ -4,98 +4,62 @@ Atualizado em 2026-09-08 com estado verificado no GitHub e no Supabase.
 
 ## Pronto / implementado
 
-- [x] Site público no GitHub Pages.
-- [x] PWA instalável e shell offline restrito aos arquivos públicos do app.
-- [x] Tema original preservado.
-- [x] Visitante pode usar sem conta.
-- [x] Projetos e notas locais.
-- [x] Favoritos e histórico locais com telas próprias no web/PWA.
-- [x] Ferramentas JSON, cores, Regex e Focus.
-- [x] IA local opcional, sem chave de API e sem custo por mensagem.
-- [x] Comunidade beta no Supabase com RLS.
-- [x] Posts entram como `pending` e não publicam automaticamente.
-- [x] Moderação de posts exige membro de `hc_admin_members` + MFA/AAL2.
-- [x] Denúncias com fila de moderação.
-- [x] Conta principal em `account.html`, independente da Comunidade.
-- [x] Conta administrativa real confirmada, com MFA verificado e membership admin ativa.
-- [x] Sessão de autenticação persistente no navegador sem transformar MFA em privilégio admin.
-- [x] Bootstrap inicial encerrado permanentemente na Edge Function `bootstrap-admin` v2.
-- [x] Admin suite aplicada e testada transacionalmente.
-- [x] Migração e RLS de notas aplicadas/testadas.
-- [x] Sincronização opt-in inclui perfil, favoritos, projetos e notas.
-- [x] Base do navegador desktop criada em `/desktop` usando isolamento de conteúdo remoto.
-- [x] Navegador desktop v0.4.0 possui abas múltiplas reais.
-- [x] Cada aba remota mantém `nodeIntegration:false`, `contextIsolation:true`, `sandbox:true` e `webSecurity:true`.
-- [x] Back/forward desktop usa `webContents.navigationHistory` por aba.
-- [x] Popups remotos viram novas abas controladas.
-- [x] Atalhos principais de navegador implementados no desktop.
-- [x] Downloads desktop tratados no processo principal via `session.will-download`.
-- [x] Diálogo nativo de salvar é mantido; página remota não recebe o caminho escolhido.
-- [x] Downloads sem gesto direto detectado recebem confirmação adicional.
-- [x] Extensões executáveis/scripts sensíveis recebem aviso explícito antes de continuar.
-- [x] Painel local de downloads mostra progresso/estado, pausa/retomada quando suportada, cancelamento e ação de mostrar na pasta.
-- [x] Core de URL/título/ciclo de abas e core de classificação de downloads têm testes unitários no CI.
+- [x] Site público no GitHub Pages e PWA com tema original.
+- [x] Conta, comunidade, MFA/admin, admin suite e sync opt-in de perfil/favoritos/projetos/notas.
+- [x] Base do navegador desktop isolando UI local de conteúdo remoto.
+- [x] Desktop v0.6.0 com abas múltiplas reais e back/forward por aba.
+- [x] Remoto mantém `nodeIntegration:false`, `contextIsolation:true`, `sandbox:true`, `webSecurity:true`.
+- [x] Popups remotos viram abas controladas.
+- [x] Atalhos principais de navegação e `Ctrl+D` para favorito.
+- [x] Downloads controlados no processo principal, com diálogo nativo, progresso, controles e aviso extra para fluxos/arquivos sensíveis.
+- [x] Histórico/favoritos desktop persistentes em arquivo local de `userData`, inacessível às páginas remotas.
+- [x] Histórico limitado e limpável; favoritos adicionáveis/removíveis pela UI local.
+- [x] Restauração de sessão guarda apenas URLs HTTPS e no máximo 10 abas.
+- [x] Restauração automática ocorre somente após fechamento limpo; execução anterior não limpa abre Home para evitar loop de crash.
+- [x] Cores de navegação/download/biblioteca/sessão possuem testes unitários no CI.
 - [x] Service worker web permanece no cache `v8`.
 
 ## Segurança — estado atual
 
-- [x] Todas as tabelas novas da admin suite estão com RLS ativo.
-- [x] Admin suite exige membership + AAL2 nas políticas sensíveis.
-- [x] Usuário sancionado não consegue publicar nem denunciar durante a sanção.
-- [x] Admin não consegue sancionar a própria conta pelo modelo atual.
-- [x] Audit log não possui política de update/delete para clientes autenticados.
-- [x] Persistência do login não altera as regras de autorização.
-- [x] Conteúdo web remoto no desktop não recebe Node/Electron APIs.
-- [x] Permissões remotas sensíveis são negadas por padrão nesta etapa.
-- [x] Navegação desktop normaliza para HTTPS/SafeSearch e não carrega esquemas não permitidos diretamente.
-- [x] Downloads são controlados fora da página remota; caminho local não é exposto ao site.
-- [x] Classificação de extensão sensível é tratada como camada de proteção, não como antivírus.
-- [ ] Security Advisor ainda mostra 1 aviso: **Leaked Password Protection Disabled**.
+- [x] RLS/admin sensível continua exigindo membership + AAL2.
+- [x] Conteúdo remoto desktop não recebe Node/Electron APIs nem filesystem.
+- [x] Permissões remotas sensíveis continuam negadas por padrão.
+- [x] Navegação desktop normaliza para HTTPS/SafeSearch e esquemas não permitidos não são carregados diretamente.
+- [x] Caminho completo de download não é exposto ao renderer remoto.
+- [x] Histórico/favoritos e sessão aceitam somente URLs HTTPS ao carregar/persistir.
+- [x] Classificação de extensão de download é camada de proteção, não antivírus.
+- [ ] Security Advisor ainda mostra **Leaked Password Protection Disabled**.
 
 ## Precisa de teste real adicional
 
-- [ ] Sincronização em dois navegadores/dispositivos com a conta real.
-- [ ] Validar conflito de notas/projetos entre dispositivos.
-- [ ] Testar anúncio/evento pelo painel web real com sessão AAL2.
-- [ ] Testar timeout/ban/revogação pelo painel web real contra uma segunda conta real.
-- [ ] Testar desktop v0.4.0 em Windows: abas, atalhos, sites reais e login/cookies.
-- [ ] Testar downloads no Windows: escolher local, pequeno/grande, cancelar, pausar/retomar, arquivo sensível e download automático.
-- [ ] Testes end-to-end de crash/reload/render process no desktop.
-
-## Bloqueado / etapa futura com custo externo
-
-- [ ] SMTP de produção para confirmação e recuperação de senha em escala pública.
-- [ ] Domínio próprio para e-mail de produção.
-- [ ] Login por telefone/SMS.
+- [ ] Sincronização em dois navegadores/dispositivos e conflitos de notas/projetos.
+- [ ] Admin web real com segunda conta para sanções/eventos/anúncios.
+- [ ] Desktop v0.6.0 em Windows: abas, atalhos, sites, login/cookies e popups.
+- [ ] Favoritos/histórico persistindo após fechar/reabrir o desktop.
+- [ ] Sessão de abas restaurando após fechamento normal.
+- [ ] Encerramento abrupto/crash abrindo somente a Home no próximo início.
+- [ ] Downloads reais no Windows: diálogo, pequeno/grande, cancelar, pausar/retomar, sensível e automático.
+- [ ] Crash/reload/render process em páginas reais.
 
 ## Próximo desenvolvimento web
 
-- [ ] Suspensão GLOBAL da conta via server-side/Edge Function, separada do ban da comunidade.
-- [ ] Reversão da suspensão global com MFA e audit log.
+- [ ] Suspensão GLOBAL server-side separada do ban da comunidade.
+- [ ] Reversão da suspensão com MFA e audit log.
 - [ ] Exportação completa dos dados sincronizados.
-- [ ] Editor de arquivos por projeto.
-- [ ] Preview isolado de projetos web.
-- [ ] Escolha explícita de arquivos/trechos a compartilhar com o assistente.
+- [ ] Editor/preview isolado e escolha explícita de arquivos para a IA.
 
 ## Navegador desktop — próxima etapa
 
-- [x] UI privilegiada local separada das páginas externas.
-- [x] `nodeIntegration:false` para remoto.
-- [x] `contextIsolation:true`.
-- [x] `sandbox:true`.
-- [x] `webSecurity:true`.
-- [x] Permissões sensíveis negadas por padrão.
 - [x] Abas múltiplas reais.
-- [x] Popup/new-window convertido em nova aba controlada.
-- [x] Back/forward por aba com API atual do Electron.
-- [x] Atalhos principais de abas/navegação.
-- [x] Downloads seguros com escolha explícita de local, progresso e controles.
-- [ ] Histórico/favoritos persistentes integrados ao desktop.
-- [ ] Restaurar abas/sessão após reiniciar o app.
+- [x] Downloads seguros/controlados.
+- [x] Histórico/favoritos persistentes locais.
+- [x] Restauração segura das abas após fechamento limpo.
 - [ ] Permissões granulares por site.
-- [ ] Filtro de navegação em nível do processo principal.
-- [ ] Instalador Windows assinado/testado.
+- [ ] Filtro de navegação no processo principal.
+- [ ] Testes end-to-end no Windows.
+- [ ] Instalador Windows testado.
 - [ ] Atualização automática segura.
+- [ ] Assinatura somente com estratégia/custo aprovado.
 
 ## Regra de produto
 
