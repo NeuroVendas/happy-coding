@@ -1,8 +1,10 @@
 const URL_BASE='https://vzfnoaixjgyifutklpwn.supabase.co';
 const KEY='sb_publishable_nQTrMmVzLt0b1t0y-Ob22g_UwF1eNDD';
 const STORAGE_KEY='happyCoding.community.auth.v1';
+const legacySession=sessionStorage.getItem(STORAGE_KEY);
+if(!localStorage.getItem(STORAGE_KEY)&&legacySession)localStorage.setItem(STORAGE_KEY,legacySession);
 const {createClient}=await import('https://esm.sh/@supabase/supabase-js@2.116.0');
-const db=createClient(URL_BASE,KEY,{auth:{storage:sessionStorage,storageKey:STORAGE_KEY,detectSessionInUrl:true}});
+const db=createClient(URL_BASE,KEY,{auth:{storage:localStorage,storageKey:STORAGE_KEY,persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 const q=id=>document.getElementById(id);
 const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
 const button=(text,fn,cls='secondary-btn')=>{const b=el('button',cls,text);b.type='button';b.addEventListener('click',fn);return b;};
@@ -29,7 +31,7 @@ async function detectBackend(){
 }
 async function init(){
   try{await requireAdmin();q('adminStatus').textContent=`Admin autenticado · MFA ${aal(session.access_token).toUpperCase()}`;q('adminApp').classList.remove('hidden');await detectBackend();await Promise.allSettled([loadOverview(),loadPending(),loadReports()]);}
-  catch(error){if(error.message==='no_session')q('adminStatus').textContent='Entre na sua conta primeiro em Conta.';else if(error.message==='mfa_required')q('adminStatus').textContent='Sua conta admin precisa verificar o código MFA nesta sessão. Vá em Conta → Segurança.';else q('adminStatus').textContent='Esta sessão não tem acesso administrativo.';}
+  catch(error){if(error.message==='no_session')q('adminStatus').textContent='Entre na sua conta primeiro em Conta.';else if(error.message==='mfa_required')q('adminStatus').textContent='Sua conta admin existe, mas esta sessão precisa verificar o MFA. Vá em Conta → Segurança.';else q('adminStatus').textContent='Esta sessão não tem acesso administrativo.';}
 }
 
 async function loadOverview(){
@@ -77,7 +79,6 @@ async function loadPending(){
 }
 async function moderatePost(post,status){if(status==='published'&&!confirm('Você revisou o conteúdo e quer publicar?'))return;const {error}=await db.from('hc_community_posts').update({status}).eq('id',post.id);if(error){alert(humanError(error));return;}await audit(`post.${status}`,post.author_id,{post_id:post.id});loadPending();loadOverview();}
 q('refreshPosts').addEventListener('click',loadPending);
-
 async function loadReports(){
   const root=q('openReports');root.replaceChildren();const {data,error}=await db.from('hc_community_reports').select('id,post_id,reporter_id,reason,details,created_at').eq('status','open').order('created_at',{ascending:true}).limit(100);if(error){root.append(el('p','',humanError(error)));return;}if(!data.length){root.append(el('p','', 'Nenhuma denúncia aberta.'));return;}
   for(const report of data){const post=await db.from('hc_community_posts').select('title,author_name,body,status').eq('id',report.post_id).maybeSingle();const r=row(post.data?.title||'Post removido',report.reason);if(report.details)r.append(el('p','',report.details));if(post.data)r.append(el('small','',`Autor: ${post.data.author_name} · status: ${post.data.status}`));const actions=el('div','admin-actions');actions.append(button('Marcar revisada',()=>finishReport(report,'reviewed')),button('Dispensar',()=>finishReport(report,'dismissed')));r.append(actions);root.append(r);}
