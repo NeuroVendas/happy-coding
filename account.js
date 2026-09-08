@@ -3,8 +3,10 @@ const KEY='sb_publishable_nQTrMmVzLt0b1t0y-Ob22g_UwF1eNDD';
 const SITE_URL='https://neurovendas.github.io/happy-coding/';
 const STORAGE_KEY='happyCoding.community.auth.v1';
 const SYNC_KEY='happyCoding.cloudSync.enabled.v1';
+const legacySession=sessionStorage.getItem(STORAGE_KEY);
+if(!localStorage.getItem(STORAGE_KEY)&&legacySession)localStorage.setItem(STORAGE_KEY,legacySession);
 const {createClient}=await import('https://esm.sh/@supabase/supabase-js@2.116.0');
-const db=createClient(URL_BASE,KEY,{auth:{storage:sessionStorage,storageKey:STORAGE_KEY,detectSessionInUrl:true}});
+const db=createClient(URL_BASE,KEY,{auth:{storage:localStorage,storageKey:STORAGE_KEY,persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 const q=id=>document.getElementById(id);
 let session=null;
 
@@ -49,7 +51,7 @@ async function render(){
   if(error){q('accountStatus').textContent='Não foi possível ler sua sessão.';return;}
   session=data.session;
   setSignedIn(!!session);
-  q('accountStatus').textContent=session?'Conta conectada.':'Nenhuma conta conectada.';
+  q('accountStatus').textContent=session?'Conta conectada neste navegador.':'Nenhuma conta conectada.';
   if(!session)return;
   q('emailState').textContent=`Conectado como ${session.user.email}`;
   renderSync();await Promise.allSettled([loadProfile(),refreshMfa(),refreshAdminLink(),ensureDirectory()]);
@@ -75,7 +77,7 @@ q('profileForm').addEventListener('submit',async e=>{
   q('profileStatus').textContent=error?'Não foi possível salvar.':'Perfil salvo ✓';
 });
 q('syncToggle').addEventListener('click',()=>{localStorage.setItem(SYNC_KEY,String(!syncEnabled()));renderSync();});
-q('logoutBtn').addEventListener('click',async()=>{await db.auth.signOut({scope:'local'});session=null;await render();});
+q('logoutBtn').addEventListener('click',async()=>{await db.auth.signOut({scope:'local'});session=null;localStorage.removeItem(STORAGE_KEY);sessionStorage.removeItem(STORAGE_KEY);await render();});
 
 q('mfaBtn').addEventListener('click',async()=>{
   q('mfaSetup').replaceChildren();q('mfaStatus').textContent='Preparando…';
@@ -95,7 +97,7 @@ q('mfaBtn').addEventListener('click',async()=>{
 
 q('deleteAccount').addEventListener('click',async()=>{
   const out=q('deleteStatus');if(q('deleteConfirm').value!=='EXCLUIR'){out.textContent='Digite EXCLUIR exatamente.';return;}if(!session){out.textContent='Nenhuma conta conectada.';return;}if(!confirm('Excluir sua conta Happy Coding permanentemente?'))return;
-  out.textContent='Excluindo…';const {data,error}=await db.functions.invoke('delete-account',{body:{confirm:'DELETE'}});if(error||data?.error){out.textContent='Não foi possível excluir agora.';return;}await db.auth.signOut({scope:'local'}).catch(()=>{});sessionStorage.removeItem(STORAGE_KEY);out.textContent='Conta excluída.';setTimeout(()=>location.href='./',1000);
+  out.textContent='Excluindo…';const {data,error}=await db.functions.invoke('delete-account',{body:{confirm:'DELETE'}});if(error||data?.error){out.textContent='Não foi possível excluir agora.';return;}await db.auth.signOut({scope:'local'}).catch(()=>{});localStorage.removeItem(STORAGE_KEY);sessionStorage.removeItem(STORAGE_KEY);out.textContent='Conta excluída.';setTimeout(()=>location.href='./',1000);
 });
 
 db.auth.onAuthStateChange(()=>setTimeout(render,0));
