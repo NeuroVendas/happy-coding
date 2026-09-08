@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0b0e13">
+  <title>Admin · Happy Coding =]</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="restored-theme.css">
+  <style>
+    body{min-height:100vh;background:#0b0e13}.admin-page{max-width:1180px;margin:auto;padding:30px 20px 80px}.admin-top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:20px}.admin-top a{color:#b7f34a;text-decoration:none}.admin-status{min-height:22px;color:#b7f34a}.admin-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.admin-tabs button.active{background:#b7f34a;color:#101510}.admin-panel{display:none}.admin-panel.active{display:block}.admin-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.admin-card{border:1px solid #33402d;background:#111710;border-radius:15px;padding:16px}.admin-card.wide{grid-column:1/-1}.admin-card h2,.admin-card h3{margin-top:0}.admin-card p,.admin-card small{color:#b7c0c9;line-height:1.5}.admin-card label{display:block;margin:10px 0}.admin-card input,.admin-card textarea,.admin-card select{width:100%;box-sizing:border-box;margin-top:5px;padding:10px;border:1px solid #435337;border-radius:9px;background:#0d120b;color:#fff}.admin-card textarea{min-height:100px;resize:vertical}.admin-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.admin-list{display:grid;gap:10px}.admin-row{border:1px solid #2b3527;border-radius:12px;padding:12px;background:#0d120b}.admin-row header{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.admin-row code{font-size:.8rem;word-break:break-all}.danger-btn{background:#482020;color:#fff;border:1px solid #7b3e3e;border-radius:9px;padding:9px 12px}.warning-btn{background:#4c3d16;color:#fff;border:1px solid #7c6729;border-radius:9px;padding:9px 12px}.hidden{display:none!important}@media(max-width:760px){.admin-grid{grid-template-columns:1fr}.admin-card.wide{grid-column:auto}.admin-top{flex-direction:column}}
+  </style>
+</head>
+<body>
+<main class="admin-page">
+  <div class="admin-top"><div><span class="section-kicker">ADMIN · MFA OBRIGATÓRIO</span><h1>Painel de Administração</h1><p>Usuários, sanções, moderação, anúncios e eventos.</p></div><div><a href="account.html">Conta</a> · <a href="./">Happy Coding</a></div></div>
+  <p id="adminStatus" class="admin-status" role="status">Validando sua sessão administrativa…</p>
+  <div id="adminApp" class="hidden">
+    <nav class="admin-tabs" aria-label="Seções do painel"><button class="secondary-btn active" data-admin-tab="overview">Visão geral</button><button class="secondary-btn" data-admin-tab="users">Usuários</button><button class="secondary-btn" data-admin-tab="moderation">Moderação</button><button class="secondary-btn" data-admin-tab="announcements">Anúncios</button><button class="secondary-btn" data-admin-tab="events">Eventos</button></nav>
+
+    <section class="admin-panel active" data-admin-panel="overview"><div class="admin-grid"><article class="admin-card"><h2>Comunidade</h2><p id="overviewPosts">Carregando…</p><button class="primary-btn" data-jump="moderation">Abrir moderação</button></article><article class="admin-card"><h2>Usuários</h2><p id="overviewUsers">Carregando…</p><button class="secondary-btn" data-jump="users">Gerenciar usuários</button></article><article class="admin-card wide"><h2>Segurança</h2><p>Ações sensíveis são autorizadas por RLS e exigem sua conta admin em AAL2. Ban e timeout não apagam a conta; suspendem ações da comunidade e deixam registro.</p></article></div></section>
+
+    <section class="admin-panel" data-admin-panel="users"><div class="admin-grid"><article class="admin-card wide"><h2>Usuários</h2><p>Busque por e-mail, nome público ou ID. Se o diretório completo ainda não estiver aplicado no Supabase, o painel mostra usuários que já participaram da comunidade.</p><label>Buscar<input id="userSearch" placeholder="nome, e-mail ou ID"></label><div id="userList" class="admin-list"></div></article><article class="admin-card wide"><h2>Sanções ativas</h2><div id="sanctionList" class="admin-list"></div></article></div></section>
+
+    <section class="admin-panel" data-admin-panel="moderation"><div class="admin-grid"><article class="admin-card"><h2>Posts aguardando revisão</h2><button class="secondary-btn" id="refreshPosts">Atualizar</button><div id="pendingPosts" class="admin-list"></div></article><article class="admin-card"><h2>Denúncias abertas</h2><button class="secondary-btn" id="refreshReports">Atualizar</button><div id="openReports" class="admin-list"></div></article></div></section>
+
+    <section class="admin-panel" data-admin-panel="announcements"><div class="admin-grid"><article class="admin-card"><h2>Novo anúncio</h2><form id="announcementForm"><label>Título<input id="announcementTitle" required maxlength="120"></label><label>Mensagem<textarea id="announcementBody" required maxlength="3000"></textarea></label><label>Tipo<select id="announcementLevel"><option value="info">Informação</option><option value="update">Atualização</option><option value="warning">Aviso</option></select></label><label>Expira em (opcional)<input id="announcementEnds" type="datetime-local"></label><label><input id="announcementPublished" type="checkbox" checked> Publicar imediatamente</label><button class="primary-btn">Publicar anúncio</button><p id="announcementStatus" class="admin-status"></p></form></article><article class="admin-card"><h2>Anúncios existentes</h2><button class="secondary-btn" id="refreshAnnouncements">Atualizar</button><div id="announcementList" class="admin-list"></div></article></div></section>
+
+    <section class="admin-panel" data-admin-panel="events"><div class="admin-grid"><article class="admin-card"><h2>Novo evento</h2><form id="eventForm"><label>Título<input id="eventTitle" required maxlength="120"></label><label>Descrição<textarea id="eventDescription" maxlength="4000"></textarea></label><label>Começa em<input id="eventStarts" type="datetime-local" required></label><label>Termina em (opcional)<input id="eventEnds" type="datetime-local"></label><label>Link (opcional)<input id="eventLink" type="url" maxlength="2048"></label><label><input id="eventPublished" type="checkbox" checked> Publicar</label><button class="primary-btn">Criar evento</button><p id="eventStatus" class="admin-status"></p></form></article><article class="admin-card"><h2>Eventos</h2><button class="secondary-btn" id="refreshEvents">Atualizar</button><div id="eventList" class="admin-list"></div></article></div></section>
+  </div>
+</main>
+<script type="module" src="admin.js"></script>
+</body>
+</html>
