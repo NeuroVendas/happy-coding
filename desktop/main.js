@@ -1,16 +1,21 @@
 'use strict';
-const {app,BaseWindow,WebContentsView,session,ipcMain}=require('electron');
+const {app,BaseWindow,WebContentsView,session,ipcMain,dialog,shell}=require('electron');
 const path=require('node:path');
 const {HOME,safeTarget,cleanTitle,nextTabId}=require('./browser-core');
+const {cleanFilename,isRiskyDownload,safePercent}=require('./download-core');
 
-const CHROME_HEIGHT=104;
+const CHROME_COLLAPSED=104;
+const CHROME_EXPANDED=360;
 const MAX_TABS=20;
-let win,chromeView,activeTabId=null,tabCounter=0;
+const MAX_DOWNLOADS=100;
+let win,chromeView,activeTabId=null,tabCounter=0,chromeHeight=CHROME_COLLAPSED,downloadCounter=0;
 const tabs=new Map();
 const closedTabs=[];
+const downloads=new Map();
 
 function currentTab(){return activeTabId?tabs.get(activeTabId):null;}
 function isChromeSender(sender){return sender===chromeView?.webContents;}
+function tabForWebContents(webContents){for(const tab of tabs.values())if(tab.view.webContents===webContents)return tab;return null;}
 function tabState(tab){
   const wc=tab.view.webContents;
   const nav=wc.navigationHistory;
@@ -24,16 +29,40 @@ function tabState(tab){
     canGoForward:nav.canGoForward()
   };
 }
+function downloadState(record){
+  return{
+    id:record.id,
+    filename:record.filename,
+    url:record.url,
+    mime:record.mime,
+    state:record.state,
+    received:record.received,
+    total:record.total,
+    percent:safePercent(record.received,record.total),
+    paused:!!record.paused,
+    canResume:!!record.canResume,
+    risky:!!record.risky,
+    automatic:!!record.automatic,
+    completedAt:record.completedAt||null,
+    saved:!!record.savePath
+  };
+}
 function sendState(){
   if(!chromeView||chromeView.webContents.isDestroyed())return;
   chromeView.webContents.send('hc:browser-state',{activeTabId,tabs:[...tabs.values()].map(tabState)});
 }
+function sendDownloads(){
+  if(!chromeView||chromeView.webContents.isDestroyed())return;
+  chromeView.webContents.send('hc:downloads-state',[...downloads.values()].slice(-MAX_DOWNLOADS).reverse().map(downloadState));
+}
+function notice(message){if(chromeView&&!chromeView.webContents.isDestroyed())chromeView.webContents.send('hc:notice',String(message||'').slice(0,200));}
 function resize(){
   if(!win)return;
   const bounds=win.getContentBounds();
-  chromeView?.setBounds({x:0,y:0,width:bounds.width,height:CHROME_HEIGHT});
-  for(const tab of tabs.values())tab.view.setBounds({x:0,y:CHROME_HEIGHT,width:bounds.width,height:Math.max(0,bounds.height-CHROME_HEIGHT)});
+  chromeView?.setBounds({x:0,y:0,width:bounds.width,height:chromeHeight});
+  for(const tab of tabs.values())tab.view.setBounds({x:0,y:chromeHeight,width:bounds.width,height:Math.max(0,bounds.height-chromeHeight)});
 }
+function setDownloadsOpen(open){chromeHeight=open?CHROME_EXPANDED:CHROME_COLLAPSED;resize();return true;}
 function activateTab(id){
   const tab=tabs.get(id);if(!tab)return false;
   activeTabId=id;
@@ -74,7 +103,7 @@ function configureRemote(tab){
   wc.on('render-process-gone',(_event,details)=>{tab.loading=false;tab.error=`Página interrompida (${details.reason})`;sendState();});
 }
 function createTab(raw=HOME,activate=true){
-  if(tabs.size>=MAX_TABS){chromeView?.webContents.send('hc:notice',`Limite de ${MAX_TABS} abas nesta versão.`);return null;}
+  if(tabs.size>=MAX_TABS){notice(`Limite de ${MAX_TABS} abas nesta versão.`);return null;}
   const id=`tab-${++tabCounter}`;
   const target=safeTarget(raw);
   const view=new WebContentsView({webPreferences:{nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true,allowRunningInsecureContent:false,spellcheck:true}});
@@ -102,15 +131,91 @@ function goBack(){const tab=currentTab();if(!tab)return false;const nav=tab.view
 function goForward(){const tab=currentTab();if(!tab)return false;const nav=tab.view.webContents.navigationHistory;if(nav.canGoForward())nav.goForward();return true;}
 function reloadActive(){const tab=currentTab();if(!tab)return false;tab.view.webContents.reload();return true;}
 
+function confirmDownload(filename,risky,automatic){
+  if(!risky&&!automatic)return true;
+  const reasons=[];
+  if(risky)reasons.push('Este tipo de arquivo pode executar código ou alterar o computador.');
+  if(automatic)reasons.push('O site iniciou este download sem um clique direto detectado.');
+  const choice=dialog.showMessageBoxSync(win,{type:'warning',title:'Confirmar download',message:`Baixar “${filename}”?`,detail:`${reasons.join(' ')} Só continue se você confia no site e esperava este arquivo.`,buttons:['Cancelar','Continuar e escolher onde salvar'],defaultId:0,cancelId:0,noLink:true});
+  return choice===1;
+}
+function registerDownload(event,item,webContents){
+  const tab=tabForWebContents(webContents);
+  if(!tab){event.preventDefault();return;}
+  const filename=cleanFilename(item.getFilename());
+  const risky=isRiskyDownload(filename);
+  const automatic=!item.hasUserGesture();
+  if(!confirmDownload(filename,risky,automatic)){event.preventDefault();notice('Download cancelado antes de iniciar.');return;}
+
+  item.setSaveDialogOptions({title:'Salvar download — Happy Coding',buttonLabel:'Salvar',defaultPath:path.join(app.getPath('downloads'),filename)});
+  const record={
+    id:`download-${++downloadCounter}`,
+    item,
+    filename,
+    url:String(item.getURL()||'').slice(0,4096),
+    mime:String(item.getMimeType()||'').slice(0,120),
+    state:'progressing',
+    received:item.getReceivedBytes(),
+    total:item.getTotalBytes(),
+    paused:item.isPaused(),
+    canResume:item.canResume(),
+    risky,
+    automatic,
+    savePath:'',
+    completedAt:null
+  };
+  downloads.set(record.id,record);
+  while(downloads.size>MAX_DOWNLOADS){const first=downloads.keys().next().value;const old=downloads.get(first);if(old?.state==='progressing')break;downloads.delete(first);}
+  sendDownloads();
+
+  item.on('updated',(_event,state)=>{
+    record.state=state;
+    record.received=item.getReceivedBytes();
+    record.total=item.getTotalBytes();
+    record.paused=item.isPaused();
+    record.canResume=item.canResume();
+    sendDownloads();
+  });
+  item.once('done',(_event,state)=>{
+    record.state=state;
+    record.received=item.getReceivedBytes();
+    record.total=item.getTotalBytes();
+    record.paused=false;
+    record.canResume=false;
+    record.savePath=state==='completed'?String(item.getSavePath()||''):'';
+    record.completedAt=Date.now();
+    record.item=null;
+    sendDownloads();
+    if(state==='completed')notice(`${record.filename} baixado com sucesso.`);
+    else if(state==='cancelled')notice(`${record.filename} cancelado.`);
+    else notice(`${record.filename} foi interrompido.`);
+  });
+}
+function withActiveDownload(id,action){
+  const record=downloads.get(String(id));
+  if(!record?.item||record.state!=='progressing')return false;
+  try{return action(record.item,record)!==false;}catch{return false;}
+}
+function pauseDownload(id){return withActiveDownload(id,(item,record)=>{item.pause();record.paused=true;sendDownloads();});}
+function resumeDownload(id){return withActiveDownload(id,(item,record)=>{if(!item.canResume())return false;item.resume();record.paused=false;sendDownloads();});}
+function cancelDownload(id){return withActiveDownload(id,item=>{item.cancel();});}
+function revealDownload(id){
+  const record=downloads.get(String(id));
+  if(!record||record.state!=='completed'||!record.savePath)return false;
+  shell.showItemInFolder(record.savePath);return true;
+}
+function clearFinishedDownloads(){for(const [id,record] of downloads)if(record.state!=='progressing')downloads.delete(id);sendDownloads();return true;}
+
 app.enableSandbox();
 app.whenReady().then(()=>{
   session.defaultSession.setPermissionRequestHandler((_wc,_permission,callback)=>callback(false));
   session.defaultSession.setPermissionCheckHandler(()=>false);
+  session.defaultSession.on('will-download',registerDownload);
   win=new BaseWindow({width:1280,height:820,minWidth:760,minHeight:520,title:'Happy Coding =]'});
   chromeView=new WebContentsView({webPreferences:{preload:path.join(__dirname,'preload.js'),nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true}});
   win.contentView.addChildView(chromeView);
   chromeView.webContents.loadFile(path.join(__dirname,'chrome.html'));
-  chromeView.webContents.on('did-finish-load',sendState);
+  chromeView.webContents.on('did-finish-load',()=>{sendState();sendDownloads();});
   createTab(HOME,true);resize();win.on('resize',resize);
   win.on('closed',()=>{for(const tab of tabs.values())if(!tab.view.webContents.isDestroyed())tab.view.webContents.close();tabs.clear();if(!chromeView?.webContents.isDestroyed())chromeView?.webContents.close();win=null;chromeView=null;activeTabId=null;});
 });
@@ -125,3 +230,9 @@ ipcMain.handle('hc:activate-tab',(event,id)=>isChromeSender(event.sender)&&activ
 ipcMain.handle('hc:close-tab',(event,id)=>isChromeSender(event.sender)&&closeTab(String(id)));
 ipcMain.handle('hc:cycle-tab',(event,direction)=>{if(!isChromeSender(event.sender))return false;cycleTabs(Number(direction)<0?-1:1);return true;});
 ipcMain.handle('hc:restore-tab',event=>{if(!isChromeSender(event.sender))return false;restoreClosedTab();return true;});
+ipcMain.handle('hc:set-downloads-open',(event,open)=>isChromeSender(event.sender)&&setDownloadsOpen(!!open));
+ipcMain.handle('hc:download-pause',(event,id)=>isChromeSender(event.sender)&&pauseDownload(id));
+ipcMain.handle('hc:download-resume',(event,id)=>isChromeSender(event.sender)&&resumeDownload(id));
+ipcMain.handle('hc:download-cancel',(event,id)=>isChromeSender(event.sender)&&cancelDownload(id));
+ipcMain.handle('hc:download-reveal',(event,id)=>isChromeSender(event.sender)&&revealDownload(id));
+ipcMain.handle('hc:downloads-clear',event=>isChromeSender(event.sender)&&clearFinishedDownloads());
