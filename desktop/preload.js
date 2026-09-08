@@ -9,6 +9,7 @@ function listener(channel,mapper){
     return()=>ipcRenderer.removeListener(channel,wrapped);
   };
 }
+function id(value){return String(value||'').slice(0,64);}
 
 contextBridge.exposeInMainWorld('happyDesktop',Object.freeze({
   navigate:value=>ipcRenderer.invoke('hc:navigate',String(value).slice(0,4096)),
@@ -16,16 +17,25 @@ contextBridge.exposeInMainWorld('happyDesktop',Object.freeze({
   forward:()=>ipcRenderer.invoke('hc:forward'),
   reload:()=>ipcRenderer.invoke('hc:reload'),
   newTab:value=>ipcRenderer.invoke('hc:new-tab',String(value||'').slice(0,4096)),
-  activateTab:id=>ipcRenderer.invoke('hc:activate-tab',String(id).slice(0,64)),
-  closeTab:id=>ipcRenderer.invoke('hc:close-tab',String(id).slice(0,64)),
+  activateTab:value=>ipcRenderer.invoke('hc:activate-tab',id(value)),
+  closeTab:value=>ipcRenderer.invoke('hc:close-tab',id(value)),
   cycleTab:direction=>ipcRenderer.invoke('hc:cycle-tab',Number(direction)<0?-1:1),
   restoreTab:()=>ipcRenderer.invoke('hc:restore-tab'),
+  setDownloadsOpen:open=>ipcRenderer.invoke('hc:set-downloads-open',!!open),
+  pauseDownload:value=>ipcRenderer.invoke('hc:download-pause',id(value)),
+  resumeDownload:value=>ipcRenderer.invoke('hc:download-resume',id(value)),
+  cancelDownload:value=>ipcRenderer.invoke('hc:download-cancel',id(value)),
+  revealDownload:value=>ipcRenderer.invoke('hc:download-reveal',id(value)),
+  clearFinishedDownloads:()=>ipcRenderer.invoke('hc:downloads-clear'),
   onBrowserState:listener('hc:browser-state',state=>({
-    activeTabId:String(state?.activeTabId||''),
+    activeTabId:id(state?.activeTabId),
     tabs:Array.isArray(state?.tabs)?state.tabs.slice(0,20).map(tab=>({
-      id:String(tab?.id||'').slice(0,64),title:String(tab?.title||'Nova aba').slice(0,80),url:String(tab?.url||'').slice(0,4096),loading:!!tab?.loading,error:String(tab?.error||'').slice(0,160),canGoBack:!!tab?.canGoBack,canGoForward:!!tab?.canGoForward
+      id:id(tab?.id),title:String(tab?.title||'Nova aba').slice(0,80),url:String(tab?.url||'').slice(0,4096),loading:!!tab?.loading,error:String(tab?.error||'').slice(0,160),canGoBack:!!tab?.canGoBack,canGoForward:!!tab?.canGoForward
     })):[]
   })),
+  onDownloadsState:listener('hc:downloads-state',items=>Array.isArray(items)?items.slice(0,100).map(item=>({
+    id:id(item?.id),filename:String(item?.filename||'download').slice(0,180),url:String(item?.url||'').slice(0,4096),mime:String(item?.mime||'').slice(0,120),state:String(item?.state||'').slice(0,32),received:Math.max(0,Number(item?.received)||0),total:Math.max(0,Number(item?.total)||0),percent:Math.max(0,Math.min(100,Number(item?.percent)||0)),paused:!!item?.paused,canResume:!!item?.canResume,risky:!!item?.risky,automatic:!!item?.automatic,saved:!!item?.saved,completedAt:Number(item?.completedAt)||null
+  })):[]),
   onFocusAddress:listener('hc:focus-address',()=>true),
   onNotice:listener('hc:notice',value=>String(value||'').slice(0,200))
 }));
