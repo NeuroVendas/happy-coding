@@ -8,18 +8,23 @@ Direção confirmada: navegador/workspace funcional para programadores, game dev
 - Comunidade conectada ao Supabase com RLS, posts pendentes, moderação admin + MFA/AAL2 e denúncias.
 - Conta principal separada da Comunidade em `account.html`.
 - Existe 1 conta real confirmada, 1 fator MFA verificado e 1 membro admin.
+- A conta real `tr.negocios.2022@gmail.com` foi verificada no banco como confirmada, com MFA verificado e membership admin intacta; o problema de “perder admin” era persistência da sessão no frontend, não remoção da permissão.
+- Conta, Comunidade e Admin passaram a persistir a sessão do Supabase em `localStorage`, com migração automática da sessão legada em `sessionStorage`.
+- O menu principal passou a ler a sessão persistente para não esconder o Painel Admin após fechar/reabrir o app.
+- Eventos de login/logout no storage foram reforçados para a sincronização reagir também a remoção da sessão.
 - `admin-suite` aplicada no Supabase (`20260908214303`): diretório, sanções, anúncios, eventos e audit log.
 - Testes transacionais com rollback passaram para timeout, ban, remoção de sanção, bloqueio de post/denúncia, proteção contra auto-sanção, anúncios/eventos públicos e audit log.
 - `project_sync_notes` aplicada (`20260908214414`): `hc_projects.notes` + `updated_at`.
 - RLS das notas testada: dono lê/edita; outro usuário não lê nem altera; limite de 20.000 caracteres confirmado.
-- `account-sync.js` agora sincroniza perfil, favoritos, projetos e notas quando o usuário ativa a sincronização.
+- `account-sync.js` sincroniza perfil, favoritos, projetos e notas quando o usuário ativa a sincronização.
 - `bootstrap-admin` foi fechado permanentemente na versão 2: sem código/hash antigo e sem uso de `service_role`; responde `bootstrap_closed`.
-- O service worker foi elevado para cache `v7` após a mudança do shell.
+- O service worker foi elevado para cache `v8` após a correção de persistência de autenticação.
 
 ## Próximas prioridades
 
 ### 1. Fechar o ciclo de conta/sincronização
 
+- Fazer teste real: entrar com a conta admin, verificar MFA, fechar totalmente o Happy Coding, abrir novamente e confirmar que a conta continua conectada e que o acesso Admin reaparece.
 - Testar sincronização real em dois navegadores/dispositivos com a conta existente.
 - Validar conflitos de notas/projetos entre dois dispositivos e definir estratégia explícita de resolução.
 - Manter sincronização opt-in; histórico continua local.
