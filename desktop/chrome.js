@@ -20,13 +20,13 @@ const HOME='https://neurovendas.github.io/happy-coding/';
 let state={activeTabId:'',tabs:[]},downloads=[],library={bookmarks:[],history:[]},activePanel=null,libraryMode='favorites';
 
 function activeTab(){return state.tabs.find(tab=>tab.id===state.activeTabId)||null;}
-function displayUrl(url){return url===HOME?'happy://home':url;}
+function displayUrl(tab){if(!tab)return'happy://home';if(tab.kind==='search')return tab.searchQuery||'';return tab.url===HOME?'happy://home':tab.url;}
 function formatBytes(value){let n=Math.max(0,Number(value)||0),i=0;const units=['B','KB','MB','GB','TB'];while(n>=1024&&i<units.length-1){n/=1024;i++;}return`${n>=10||i===0?n.toFixed(0):n.toFixed(1)} ${units[i]}`;}
 function originLabel(url){try{return new URL(url).hostname||url;}catch{return url||'origem desconhecida';}}
 function formatWhen(value){if(!value)return'';try{return new Date(value).toLocaleString('pt-BR');}catch{return'';}}
 function stateLabel(item){if(item.state==='completed')return'Concluído';if(item.state==='cancelled')return'Cancelado';if(item.state==='interrupted')return'Interrompido';if(item.paused)return'Pausado';return item.total?`${item.percent}%`:'Baixando…';}
-function currentBookmarked(){const url=activeTab()?.url;return!!url&&library.bookmarks.some(item=>item.url===url);}
-function renderBookmarkState(){const saved=currentBookmarked();bookmarkBtn.classList.toggle('saved',saved);bookmarkBtn.textContent=saved?'★':'☆';bookmarkBtn.title=saved?'Remover dos favoritos (Ctrl+D)':'Adicionar aos favoritos (Ctrl+D)';}
+function currentBookmarked(){const tab=activeTab();if(!tab||tab.kind==='search')return false;return library.bookmarks.some(item=>item.url===tab.url);}
+function renderBookmarkState(){const tab=activeTab();const saved=currentBookmarked();bookmarkBtn.disabled=!tab||tab.kind==='search';bookmarkBtn.classList.toggle('saved',saved);bookmarkBtn.textContent=saved?'★':'☆';bookmarkBtn.title=tab?.kind==='search'?'Resultados de pesquisa não são favoritados':saved?'Remover dos favoritos (Ctrl+D)':'Adicionar aos favoritos (Ctrl+D)';}
 function renderTabs(){
   tabsRoot.replaceChildren();
   for(const tab of state.tabs){
@@ -43,8 +43,8 @@ function render(next){
   state=next;renderTabs();renderBookmarkState();
   const tab=activeTab();
   back.disabled=!tab?.canGoBack;forward.disabled=!tab?.canGoForward;
-  if(document.activeElement!==address)address.value=displayUrl(tab?.url||HOME);
-  status.textContent=tab?.error||((tab?.loading)?'Carregando…':'HTTPS + SafeSearch');status.title=status.textContent;
+  if(document.activeElement!==address)address.value=displayUrl(tab);
+  status.textContent=tab?.error||((tab?.loading)?(tab?.kind==='search'?'Buscando no Google…':'Carregando…'):(tab?.kind==='search'?'Google · SafeSearch':'HTTPS + SafeSearch'));status.title=status.textContent;
 }
 function actionButton(text,handler,cls=''){const button=document.createElement('button');button.type='button';button.textContent=text;if(cls)button.className=cls;button.addEventListener('click',handler);return button;}
 function renderDownloads(next=downloads){
@@ -88,7 +88,7 @@ document.getElementById('newTab').addEventListener('click',()=>window.happyDeskt
 bookmarkBtn.addEventListener('click',()=>window.happyDesktop.toggleBookmark());downloadsBtn.addEventListener('click',()=>setPanel(activePanel==='downloads'?null:'downloads'));libraryBtn.addEventListener('click',()=>setPanel(activePanel==='library'?null:'library'));
 document.getElementById('clearDownloads').addEventListener('click',()=>window.happyDesktop.clearFinishedDownloads());
 favoritesTab.addEventListener('click',()=>{libraryMode='favorites';renderLibraryList();});historyTab.addEventListener('click',()=>{libraryMode='history';renderLibraryList();});clearHistory.addEventListener('click',()=>{if(confirm('Limpar todo o histórico local deste navegador?'))window.happyDesktop.clearHistory();});
-window.happyDesktop.onBrowserState(render);window.happyDesktop.onDownloadsState(renderDownloads);window.happyDesktop.onLibraryState(renderLibrary);window.happyDesktop.onFocusAddress(()=>{address.focus();address.select();});window.happyDesktop.onNotice(message=>{status.textContent=message;status.title=message;});
+window.happyDesktop.onBrowserState(render);window.happyDesktop.onDownloadsState(renderDownloads);window.happyDesktop.onLibraryState(renderLibrary);window.happyDesktop.onFocusAddress(()=>{address.focus();address.select();});window.happyDesktop.onOpenDownloads(()=>setPanel('downloads'));window.happyDesktop.onOpenHistory(()=>{libraryMode='history';renderLibraryList();setPanel('library');});window.happyDesktop.onNotice(message=>{status.textContent=message;status.title=message;});
 
 document.addEventListener('keydown',event=>{
   const key=event.key.toLowerCase();const mod=navigator.platform.toLowerCase().includes('mac')?event.metaKey:event.ctrlKey;
