@@ -8,79 +8,87 @@ Direção confirmada: navegador/workspace funcional para programadores, game dev
 - Comunidade conectada ao Supabase com RLS, posts pendentes, moderação admin + MFA/AAL2 e denúncias.
 - Conta principal separada da Comunidade em `account.html`.
 - Existe 1 conta real confirmada, 1 fator MFA verificado e 1 membro admin.
-- A conta real `tr.negocios.2022@gmail.com` foi verificada no banco como confirmada, com MFA verificado e membership admin intacta; o problema de “perder admin” era persistência da sessão no frontend, não remoção da permissão.
-- Conta, Comunidade e Admin persistem a sessão do Supabase no navegador e o acesso Admin continua protegido por membership + MFA/AAL2 nas ações sensíveis.
-- `admin-suite` aplicada no Supabase (`20260908214303`): diretório, sanções, anúncios, eventos e audit log.
-- `project_sync_notes` aplicada (`20260908214414`): `hc_projects.notes` + `updated_at`.
-- `account-sync.js` sincroniza perfil, favoritos, projetos e notas quando o usuário ativa a sincronização.
-- `bootstrap-admin` foi fechado permanentemente na versão 2.
-- O service worker está no cache `v8` após as correções de autenticação.
-- Navegador desktop `/desktop` avançou para v0.3.0 com **abas múltiplas reais** usando um `WebContentsView` isolado por aba.
-- Abas desktop têm criar/ativar/fechar/restaurar, título e URL reais, loading/erro e back/forward independentes via `navigationHistory`.
-- Popups remotos são transformados em novas abas controladas, sem conceder privilégios Electron à página.
-- Atalhos desktop implementados: Ctrl+L, Ctrl+T, Ctrl+W, Ctrl+Tab, Ctrl+Shift+Tab, Ctrl+Shift+T, Ctrl+R e Alt+setas.
-- Core de navegação desktop ganhou testes unitários e passou a fazer parte do CI.
+- A conta real `tr.negocios.2022@gmail.com` permanece com membership admin; o problema anterior era persistência de sessão, já corrigida no frontend.
+- Conta, Comunidade e Admin persistem a sessão do Supabase e ações sensíveis continuam exigindo membership + MFA/AAL2.
+- `admin-suite` e `project_sync_notes` estão aplicadas no Supabase.
+- `account-sync.js` sincroniza perfil, favoritos, projetos e notas quando o opt-in está ativo.
+- `bootstrap-admin` permanece permanentemente fechado na versão 2.
+- Service worker web permanece no cache `v8`.
+- Navegador desktop `/desktop` avançou para **v0.4.0**.
+- Abas múltiplas reais usam um `WebContentsView` isolado por aba.
+- Back/forward por aba usa `webContents.navigationHistory`.
+- Popups remotos viram novas abas controladas, sem privilégio Electron.
+- Atalhos principais de abas/navegação estão implementados.
+- Downloads são controlados no processo principal via `session.will-download` / `DownloadItem`.
+- Usuário escolhe onde salvar pelo diálogo nativo; páginas remotas não recebem caminho do filesystem.
+- Downloads automáticos e extensões sensíveis recebem confirmação extra.
+- Painel local de downloads mostra progresso/estado e permite pausar/retomar quando suportado, cancelar e mostrar arquivo concluído na pasta.
+- Core de navegação e core de classificação de downloads têm testes unitários e fazem parte do CI.
 
 ## Prioridade atual — tornar o navegador desktop realmente utilizável
 
-### 1. Downloads seguros
+### 1. Histórico e favoritos desktop
 
-- Capturar `will-download` apenas no processo principal.
-- Exigir origem/navegação aceitável e evitar downloads silenciosos quando possível.
-- Usar diálogo de salvamento do sistema; não salvar executáveis automaticamente.
-- Mostrar progresso, concluído/interrompido/cancelado e permitir abrir pasta apenas por ação explícita.
-- Não expor filesystem para páginas remotas.
-
-### 2. Histórico e favoritos desktop
-
-- Persistir localmente em `app.getPath('userData')`, não em páginas remotas.
-- Histórico por navegação real, com limpeza explícita.
+- Persistir localmente em `app.getPath('userData')`, nunca em páginas remotas.
+- Histórico baseado em navegações reais, com limite e limpeza explícita.
 - Favoritos adicionados/removidos pelo chrome local.
-- Nunca permitir que página externa leia a biblioteca local.
+- Página externa nunca lê a biblioteca local.
+- Estrutura preparada para futura sincronização opcional, sem misturar credenciais ou privilégios.
 
-### 3. Restaurar sessão do navegador
+### 2. Restaurar sessão do navegador
 
-- Salvar abas abertas e aba ativa ao fechar.
-- Restaurar somente URLs permitidas pelo normalizador seguro.
-- Limitar quantidade de abas restauradas e tratar crash sem loop.
+- Salvar URLs das abas abertas e aba ativa ao fechar.
+- Restaurar somente URLs revalidadas por `safeTarget`.
+- Limitar número de abas restauradas.
+- Tratar crash sem criar loop de restauração.
 
-### 4. Permissões por site
+### 3. Permissões por site
 
 - Continuar negando câmera/mic/localização por padrão.
 - Criar UI explícita para o usuário conceder permissões específicas quando necessário.
-- Nenhuma página remota pode alterar a política de permissões do app.
+- Página remota nunca altera a política de permissões.
 
-### 5. Windows real
+### 4. Downloads — validação Windows
+
+Implementação existe, mas ainda precisa teste real em Windows para:
+- diálogo nativo de salvar;
+- download pequeno/grande;
+- progresso;
+- pausa/retomada em servidor compatível;
+- cancelamento;
+- arquivo executável/script e aviso extra;
+- download iniciado automaticamente;
+- mostrar arquivo concluído na pasta.
+
+A classificação por extensão é uma camada de proteção e **não substitui antivírus/análise de malware**.
+
+### 5. Windows / distribuição
 
 - Testes manuais/end-to-end em Windows.
 - Empacotamento e instalador.
-- Assinatura e atualização automática segura somente quando houver uma estratégia sem custo inesperado/aprovada.
+- Assinatura e atualização automática segura somente com estratégia de custo aprovada.
 
-## Outras frentes que continuam pendentes
+## Outras frentes pendentes
 
 ### Conta / sincronização
-
-- Testar sincronização real em dois navegadores/dispositivos.
-- Validar conflitos de notas/projetos entre dois dispositivos.
-- Manter sincronização opt-in; histórico web continua local.
-- Habilitar proteção contra senhas vazadas no Supabase Auth quando houver configuração disponível.
+- testar sincronização real em dois navegadores/dispositivos;
+- validar conflitos de notas/projetos;
+- manter sincronização opt-in;
+- habilitar proteção contra senhas vazadas no Supabase Auth quando houver configuração disponível.
 
 ### Admin
-
-- Suspensão GLOBAL server-side separada de timeout/ban da comunidade.
-- Reversão com admin + MFA/AAL2 e audit log.
-- Melhor tratamento de erros no painel.
+- suspensão GLOBAL server-side separada de timeout/ban da comunidade;
+- reversão com admin + MFA/AAL2 e audit log;
+- melhorar tratamento de erros no painel.
 
 ### Editor / workspace
-
-- Editor de arquivos por projeto.
-- Arquivos e snippets salvos com segurança.
-- Preview web isolado/sandboxed.
-- Importar/exportar projetos sem executar código automaticamente.
+- editor de arquivos por projeto;
+- arquivos/snippets salvos com segurança;
+- preview isolado/sandboxed;
+- import/export sem execução automática.
 
 ### IA =]
-
-- Melhorar compatibilidade e qualidade da IA local.
+- melhorar compatibilidade/qualidade local;
 - IA recebe somente arquivos/trechos escolhidos explicitamente pelo usuário.
 
 ## Regra permanente
