@@ -29,8 +29,12 @@ jobs:
           node --check community.js
           node --check safety-ui.js
           node --check account-sync.js
+          node --check account-entry.js
+          node --check public-feed.js
           node --check sync-hook.js
           node --check ai-local.js
+          node --input-type=module --check < account.js
+          node --input-type=module --check < admin.js
       - name: Check offline behavior
         run: node --test tests/sw.test.cjs
       - name: Setup Pages
