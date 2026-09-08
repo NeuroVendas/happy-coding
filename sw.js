@@ -1,5 +1,53 @@
-const CACHE='happy-coding-v1';
-const CORE=['./','./index.html','./styles.css','./original-overrides.css','./accessibility-pwa.css','./app.js','./manifest.webmanifest','./icon.svg'];
-self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)));self.skipWaiting();});
-self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));self.clients.claim();});
-self.addEventListener('fetch',event=>{const req=event.request;if(req.method!=='GET')return;const url=new URL(req.url);if(url.origin!==location.origin)return;event.respondWith(fetch(req).then(res=>{const copy=res.clone();caches.open(CACHE).then(cache=>cache.put(req,copy));return res;}).catch(()=>caches.match(req).then(hit=>hit||caches.match('./index.html'))));});
+'use strict';
+
+// Bump the version whenever an offline shell file changes.
+const SCOPE = new URL(self.registration.scope);
+const CACHE_PREFIX = `happy-coding:${SCOPE.href}:`;
+const CACHE = `${CACHE_PREFIX}v2`;
+const CORE = [
+  './', './index.html', './styles.css', './original-overrides.css',
+  './accessibility-pwa.css', './app.js', './ai-local.js',
+  './manifest.webmanifest', './icon.svg'
+].map(path => new URL(path, SCOPE).href);
+
+self.addEventListener('install', event => {
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE);
+    // Only this public, explicit shell is cached; never account/API responses.
+    await cache.addAll(CORE.map(url => new Request(url, {cache: 'reload', credentials: 'omit'})));
+    await self.skipWaiting();
+  })());
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter(key => key.startsWith(CACHE_PREFIX) && key !== CACHE)
+      .map(key => caches.delete(key)));
+    // Keep legacy/unrelated caches: they do not have a reliable scope marker.
+    await self.clients.claim();
+  })());
+});
+
+self.addEventListener('fetch', event => {
+  const request = event.request;
+  const url = new URL(request.url);
+  if (request.method !== 'GET' || url.origin !== SCOPE.origin ||
+      !url.pathname.startsWith(SCOPE.pathname)) return;
+
+  const navigation = request.mode === 'navigate';
+  if (!navigation && !CORE.includes(url.href)) return;
+
+  event.respondWith((async () => {
+    try {
+      // Network-first keeps the live site fresh. Never cache runtime responses.
+      return await fetch(request);
+    } catch {
+      const cache = await caches.open(CACHE);
+      const fallback = navigation ? new URL('index.html', SCOPE).href : request;
+      const cached = await cache.match(fallback);
+      // HTML is a fallback for pages only, never for JavaScript/CSS/images.
+      return cached || Response.error();
+    }
+  })());
+});

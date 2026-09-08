@@ -209,6 +209,16 @@ Não ativar cobrança, plano pago, domínio, SMS ou API paga sem aprovação exp
 
 ## Próximo ciclo recomendado
 
+### Última manutenção — 2026-09-08
+
+- Corrigido o service worker: cache isolado pelo endereço do Happy Coding, sem apagar caches de outros apps.
+- Apenas os arquivos públicos listados em `CORE` são armazenados na instalação; respostas de navegação/API não são gravadas durante o uso.
+- Offline: páginas usam o HTML salvo; arquivos JavaScript/CSS nunca recebem HTML como substituto.
+- `ai-local.js` faz parte do shell offline. Biblioteca e modelo da IA ainda precisam do download inicial autorizado pelo usuário.
+- Testes: `node --test tests/sw.test.cjs`, também executados antes do deploy do Pages.
+- Ao mudar arquivos do shell, aumentar a versão de `CACHE` em `sw.js` e atualizar a versão esperada no teste para renovar a cópia offline.
+- Visual e armazenamento de projetos/perfil permanecem como estavam. Login/sincronização e reforço do filtro continuam pendentes.
+
 - estabilizar PWA/mobile;
 - tornar perfil/login real sem bloquear visitante;
 - sincronizar projetos/favoritos/configurações via Supabase;
