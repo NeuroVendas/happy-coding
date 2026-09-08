@@ -62,13 +62,14 @@ Prioridade de custo: **0 sempre que possível**. Não ativar cobrança, domínio
 
 ### GitHub
 
-O ciclo começou no HEAD `94028ba4fdc3b028fd6d3b38f192a57350976974`.
+O ciclo anterior começou no HEAD `94028ba4fdc3b028fd6d3b38f192a57350976974`.
 
-Alterações deste ciclo incluem:
+Alterações já verificadas:
 - sincronização de notas em `account-sync.js`;
-- cache do service worker elevado para `v7` e teste correspondente;
-- documentação atualizada para refletir estado real;
-- `backend/project-sync-notes.sql` marcado como aplicado.
+- admin suite e sincronização de notas aplicadas no Supabase;
+- bootstrap de primeiro admin encerrado;
+- correção de persistência de autenticação para evitar perda aparente de conta/admin ao fechar o app;
+- cache do service worker elevado para `v8` após a correção de autenticação.
 
 ### Supabase
 
@@ -76,12 +77,43 @@ Projeto usado e verificado: `vzfnoaixjgyifutklpwn`.
 
 Estado confirmado:
 - 1 usuário real;
+- conta real: `tr.negocios.2022@gmail.com`;
 - e-mail confirmado;
 - 1 fator MFA verificado;
-- 1 membro em `hc_admin_members`;
+- essa mesma conta continua membro de `hc_admin_members`;
+- portanto a reclamação de “perder admin” NÃO era remoção da permissão no banco; era perda da sessão temporária no frontend;
 - 1 usuário no diretório administrativo após backfill;
 - `delete-account` ativa com JWT;
 - `bootstrap-admin` ativa na versão 2, mas permanentemente fechada.
+
+### Persistência da conta / correção 2026-09-08
+
+Problema encontrado:
+- `account.js`, `community.js` e `admin.js` forçavam o Supabase Auth a usar `sessionStorage`;
+- ao fechar a aba/janela, o navegador apagava essa sessão;
+- o banco mantinha a conta/admin, mas o frontend voltava como desconectado;
+- `account-entry.js` também lia apenas `sessionStorage`, então o atalho Admin podia desaparecer mesmo com membership correta.
+
+Correção aplicada:
+- Conta, Comunidade e Admin usam `localStorage` como storage do Supabase Auth;
+- `persistSession: true` e `autoRefreshToken: true` explícitos;
+- existe migração automática: se ainda houver sessão antiga em `sessionStorage` e nenhuma persistente, ela é copiada para `localStorage`;
+- `account-entry.js` lê primeiro a sessão persistente e faz fallback/migração da sessão antiga;
+- `sync-hook.js` agora dispara mudança tanto em `setItem` quanto `removeItem`, e mantém compatibilidade do evento de sessão quando o auth muda em `localStorage`;
+- logout remove também qualquer cópia legada em `sessionStorage`;
+- cache offline elevado para `v8`.
+
+Importante:
+- persistir login NÃO concede admin;
+- acesso Admin continua exigindo membership real em `hc_admin_members` + JWT AAL2;
+- em computador compartilhado, usuário deve usar “Sair da conta”.
+
+Teste real ainda necessário:
+1. entrar com `tr.negocios.2022@gmail.com`;
+2. verificar MFA/AAL2;
+3. confirmar que o Painel Admin aparece;
+4. fechar totalmente o Happy Coding;
+5. abrir de novo e confirmar que a conta continua conectada e que o Admin reaparece.
 
 ### Migrations aplicadas
 
@@ -151,7 +183,7 @@ RLS foi testado em transação:
 - limite de tamanho funciona;
 - fixtures foram revertidos.
 
-`account-sync.js` agora sincroniza, quando o usuário ativa o opt-in:
+`account-sync.js` sincroniza, quando o usuário ativa o opt-in:
 - perfil;
 - favoritos;
 - projetos;
@@ -187,7 +219,7 @@ Deve centralizar:
 
 A Comunidade pode ter atalhos, mas não pode ser o único lugar para administrar a conta.
 
-`account.js` já faz upsert do próprio usuário em `hc_user_directory` após sessão válida. O backfill atual inseriu o usuário real existente no diretório.
+`account.js` faz upsert do próprio usuário em `hc_user_directory` após sessão válida. O backfill atual inseriu o usuário real existente no diretório.
 
 ## Comunidade
 
@@ -286,7 +318,7 @@ Arquivos:
 - `manifest.webmanifest`
 - `.github/workflows/pages.yml`
 
-Estado atual do cache esperado após este ciclo: `v7`.
+Estado atual do cache esperado após este ciclo: `v8`.
 
 Workflow do Pages executa:
 - `node --check` nos módulos JS relevantes;
@@ -307,13 +339,14 @@ SMTP de produção/domínio próprio ficam para etapa futura e não devem gerar 
 ## Próxima ordem de execução
 
 1. Confirmar CI/Pages do HEAD atual.
-2. Testar sincronização real em dois navegadores/dispositivos.
-3. Testar admin pelo frontend real com uma segunda conta quando disponível.
-4. Implementar suspensão GLOBAL server-side com MFA + audit log.
-5. Melhorar tratamento de erro do admin para nunca registrar/mostrar sucesso após falha.
-6. Seguir para editor/arquivos/preview isolado.
-7. Evoluir IA com seleção explícita de arquivos.
-8. Evoluir browser desktop real.
+2. Fazer teste real de fechar/reabrir com a conta admin e verificar persistência.
+3. Testar sincronização real em dois navegadores/dispositivos.
+4. Testar admin pelo frontend real com uma segunda conta quando disponível.
+5. Implementar suspensão GLOBAL server-side com MFA + audit log.
+6. Melhorar tratamento de erro do admin para nunca registrar/mostrar sucesso após falha.
+7. Seguir para editor/arquivos/preview isolado.
+8. Evoluir IA com seleção explícita de arquivos.
+9. Evoluir browser desktop real.
 
 ## Não fazer
 
