@@ -2,41 +2,41 @@
 
 Protótipo do navegador desktop real para Windows. Esta pasta é separada do site/PWA.
 
-## Estado atual — v0.4.0
+## Estado atual — v0.6.0
 
-- Interface privilegiada local (`chrome.html`) separada das páginas externas.
-- Conteúdo remoto usa um `WebContentsView` por aba, com `nodeIntegration:false`, `contextIsolation:true`, `sandbox:true` e `webSecurity:true`.
-- Abas múltiplas reais, com criação, ativação, fechamento e restauração da última aba fechada.
-- Links/popup que pedem nova janela são convertidos em nova aba controlada; a janela remota não recebe privilégios Electron.
-- Back/forward são independentes por aba usando `webContents.navigationHistory`.
-- A barra recebe URL, título, estado de carregamento, erro e disponibilidade de voltar/avançar da aba ativa.
-- Atalhos: `Ctrl+L`, `Ctrl+T`, `Ctrl+W`, `Ctrl+Tab`, `Ctrl+Shift+Tab`, `Ctrl+Shift+T`, `Ctrl+R`, `Alt+Left` e `Alt+Right`.
-- Permissões de câmera, microfone, localização e similares continuam negadas por padrão nesta etapa.
-- Navegação direta prioriza HTTPS. Endereços `http://` são elevados para HTTPS; esquemas perigosos/não suportados viram pesquisa.
-- Textos viram pesquisa Google com SafeSearch ativo.
-- IPC expõe apenas operações específicas e o processo principal valida o `sender`.
-- Downloads agora são tratados no processo principal via `session.will-download`.
-- O usuário escolhe onde salvar por meio do diálogo nativo; o site remoto não recebe o caminho escolhido.
-- Downloads iniciados sem gesto direto do usuário recebem confirmação extra.
-- Arquivos potencialmente executáveis/perigosos (`.exe`, `.msi`, `.bat`, `.cmd`, `.ps1`, `.lnk`, `.jar`, `.iso` e outros da lista interna) recebem aviso explícito antes de continuar.
-- Painel local de downloads mostra progresso, estado, origem e permite pausar/retomar quando o servidor suporta, cancelar e mostrar o arquivo concluído na pasta.
-- O core de normalização de URL/título/ciclo de abas e o core de classificação de downloads têm testes unitários em `desktop/tests` e são executados no CI do repositório.
+- UI privilegiada local separada das páginas externas.
+- Cada aba remota usa `WebContentsView` com `nodeIntegration:false`, `contextIsolation:true`, `sandbox:true` e `webSecurity:true`.
+- Abas múltiplas reais, popup/new-window convertido em aba controlada e back/forward independente por aba.
+- Atalhos principais: `Ctrl+L`, `Ctrl+T`, `Ctrl+W`, `Ctrl+Tab`, `Ctrl+Shift+Tab`, `Ctrl+Shift+T`, `Ctrl+R`, `Ctrl+D`, `Alt+Left` e `Alt+Right`.
+- Navegação direta prioriza HTTPS; texto vira pesquisa Google com SafeSearch.
+- Downloads são controlados no processo principal. O usuário escolhe onde salvar; downloads automáticos e extensões sensíveis recebem aviso extra.
+- Painel local de downloads mostra progresso/estado e oferece pausa/retomada quando suportada, cancelamento e “mostrar na pasta”.
+- Favoritos e histórico desktop agora são persistidos localmente em `app.getPath('userData')/browser-library.json`.
+- A página remota não recebe a biblioteca local; somente o chrome local acessa via IPC estreito.
+- Favoritos: adicionar/remover, estrela na barra e lista local. Histórico: registro das navegações HTTPS, limite, painel local e limpeza explícita.
+- A sessão das abas é salva em `browser-session.json` e restaura no máximo 10 URLs HTTPS após **fechamento limpo**.
+- Se a execução anterior não terminou limpa, a restauração automática é desativada e o navegador abre a Home, evitando loop de crash.
+- Cores/identidade Happy Coding preservadas.
+- Cores, abas, downloads, biblioteca e sessão têm módulos testáveis no CI.
 
-## Ainda não pronto
+## Ainda precisa de teste real no Windows
 
-- Teste end-to-end dos downloads em Windows real, inclusive escolha de pasta, cancelamento e arquivos de diferentes tamanhos.
-- Persistência da lista de downloads após reiniciar o aplicativo.
-- Favoritos/histórico persistentes integrados ao app desktop.
-- Sessão de abas restaurada após reiniciar o aplicativo.
-- Gerenciamento granular de permissões por site.
-- Perfil e comunidade integrados sem misturar privilégios com páginas externas.
-- Filtro de conteúdo em nível de rede/navegação.
-- Atualização automática assinada e instalador Windows.
-- Persistência segura de credenciais e testes end-to-end no Windows.
+- abrir/fechar/trocar muitas abas e restaurar com `Ctrl+Shift+T`;
+- fechar o app normalmente e confirmar restauração das abas;
+- simular encerramento abrupto e confirmar que abre apenas a Home;
+- favoritos/histórico entre reinicializações;
+- downloads pequenos/grandes, cancelar, pausar/retomar, executáveis/scripts e diálogo nativo;
+- sites reais, login/cookies, páginas pesadas e crash de renderer.
+
+## Próximas etapas
+
+- permissões granulares por site mantendo câmera/mic/localização negados por padrão;
+- filtro de navegação no processo principal;
+- testes end-to-end no Windows;
+- empacotamento/instalador e atualização segura;
+- lista de downloads persistente (a lista atual fica apenas na sessão).
 
 ## Executar em desenvolvimento
-
-Requer Node.js e npm:
 
 ```bash
 cd desktop
@@ -46,4 +46,4 @@ npm test
 npm start
 ```
 
-Nunca habilite Node.js para páginas externas e não desative `webSecurity` para "fazer funcionar". O frontend privilegiado deve continuar local e separado do conteúdo web.
+Nunca habilite Node.js para páginas externas e não desative `webSecurity`, sandbox ou context isolation para “fazer funcionar”.
