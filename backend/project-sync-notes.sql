@@ -1,6 +1,7 @@
 -- Happy Coding =] — project notes cloud sync
--- STATUS: PENDING. Do not assume this file has been applied to Supabase.
--- Apply through a reviewed Supabase migration, then run the security advisor.
+-- STATUS: APPLIED to Supabase Happy Coding on 2026-09-08.
+-- Migration: 20260908214414 project_sync_notes.
+-- Keep RLS ownership policies audited after future changes.
 
 alter table public.hc_projects
   add column if not exists notes text not null default '';
@@ -22,5 +23,4 @@ alter table public.hc_projects
   add constraint hc_projects_notes_check
   check (char_length(notes) <= 20000);
 
--- Existing RLS ownership policies must remain enabled and should be re-audited
--- after this migration. No service-role key belongs in frontend code.
+-- No service-role key belongs in frontend code.
