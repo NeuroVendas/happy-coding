@@ -8,7 +8,8 @@ const CORE = [
   './', './index.html', './styles.css', './original-overrides.css',
   './accessibility-pwa.css', './app.js', './ai-local.js',
   './manifest.webmanifest', './icon.svg',
-  './restored-theme.css', './community.css', './community.js'
+  './restored-theme.css', './community.css', './community.js',
+  './safety-ui.js', './privacy.html', './community-guidelines.html'
 ].map(path => new URL(path, SCOPE).href);
 
 self.addEventListener('install', event => {
