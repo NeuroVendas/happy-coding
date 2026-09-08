@@ -112,7 +112,7 @@ function addSafetyLinks(){
 }
 addSafetyLinks();
 
-// Safe web search: keep search results inside Happy Coding instead of navigating to google.com.
+// Search stays inside Happy Coding; providers are an implementation detail.
 const HC_WEB_SEARCH_URL=`${HC_SUPABASE_URL}/functions/v1/web-search`;
 const HC_HISTORY_KEY='happyCoding.history.v1';
 let hcSearchVersion=0;
@@ -130,19 +130,22 @@ function hcAdultSearch(value){
 function hcInjectSearchStyle(){
   if(q('hcSearchStyle'))return;
   const style=document.createElement('style');style.id='hcSearchStyle';style.textContent=`
-    .hc-search-view{max-width:980px;margin:0 auto;padding:28px 8px 70px}.hc-search-head{display:flex;gap:16px;align-items:flex-end;justify-content:space-between;margin-bottom:20px}.hc-search-head h1{margin:5px 0 0;font-size:clamp(1.7rem,4vw,2.5rem)}.hc-search-provider{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;opacity:.7}.hc-search-status{min-height:24px;margin:8px 0 18px;opacity:.82}.hc-search-list{display:grid;gap:12px}.hc-search-card{width:100%;text-align:left;background:var(--panel,#111722);border:1px solid rgba(255,255,255,.09);border-radius:14px;padding:17px 18px;color:inherit;cursor:pointer}.hc-search-card:hover,.hc-search-card:focus-visible{border-color:#b7f34a;transform:translateY(-1px)}.hc-search-card strong{display:block;font-size:1.03rem;margin:5px 0 7px;color:#dfffa7}.hc-search-host{display:block;font-size:.76rem;opacity:.66;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hc-search-card p{margin:0;line-height:1.45;opacity:.84}.hc-search-empty{padding:24px;border:1px dashed rgba(255,255,255,.14);border-radius:14px;opacity:.78}.hc-search-retry{margin-top:12px}@media(max-width:700px){.hc-search-view{padding:20px 2px 70px}.hc-search-head{align-items:flex-start;flex-direction:column}.hc-search-card{padding:15px}}
+    .hc-search-view{max-width:960px;margin:0 auto;padding:6px 0 70px}.hc-search-head{display:flex;gap:18px;align-items:flex-start;justify-content:space-between;padding:8px 0 18px;border-bottom:1px solid var(--line,#292e36);margin-bottom:12px}.hc-search-head h1{margin:4px 0 0;font-size:clamp(1.55rem,3vw,2.05rem);letter-spacing:-.03em}.hc-search-query{margin:7px 0 0;color:var(--muted,#8e969f);font-size:.94rem}.hc-search-badge{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid #354128;border-radius:999px;background:#172014;color:#c9ee89;font-size:.72rem;font-weight:750;white-space:nowrap}.hc-search-badge::before{content:'';width:7px;height:7px;border-radius:50%;background:#b7f34a;box-shadow:0 0 0 4px #b7f34a12}.hc-search-status{min-height:22px;margin:12px 0 14px;color:#8f98a3;font-size:.84rem}.hc-search-list{display:grid;gap:9px}.hc-search-card{width:100%;text-align:left;background:#15181d;border:1px solid #292e36;border-radius:13px;padding:15px 17px;color:inherit;cursor:pointer;transition:border-color .14s ease,background .14s ease,transform .14s ease}.hc-search-card:hover,.hc-search-card:focus-visible{border-color:#607b36;background:#181d18;transform:translateY(-1px)}.hc-search-card strong{display:block;font-size:1rem;margin:4px 0 6px;color:#eaf4d9;font-weight:720}.hc-search-host{display:block;font-size:.72rem;color:#9ab46f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hc-search-card p{margin:0;color:#a7afb7;font-size:.88rem;line-height:1.5}.hc-search-state{display:flex;align-items:center;gap:12px;padding:16px 17px;border:1px solid #292e36;border-radius:13px;background:#15181d;color:#a7afb7}.hc-search-dot{width:10px;height:10px;border-radius:50%;background:#b7f34a;box-shadow:0 0 0 0 #b7f34a40;animation:hcPulse 1.25s infinite}.hc-search-error{display:block}.hc-search-error strong{display:block;color:#eef0eb;margin-bottom:5px}.hc-search-error p{margin:0;color:#959da6;line-height:1.5}.hc-search-retry{margin-top:13px}@keyframes hcPulse{50%{box-shadow:0 0 0 8px #b7f34a00;opacity:.55}}@media(max-width:700px){.hc-search-view{padding-bottom:90px}.hc-search-head{flex-direction:column}.hc-search-card{padding:14px}.hc-search-badge{align-self:flex-start}}
   `;document.head.append(style);
 }
 function hcEnsureSearchView(){
   let section=q('hcSearchView');if(section)return section;
   hcInjectSearchStyle();section=el('section','view hc-search-view');section.id='hcSearchView';section.dataset.viewPanel='search';
-  const head=el('div','hc-search-head');const titleBox=el('div');titleBox.append(el('span','section-kicker','BUSCA SEGURA'),el('h1','','Resultados da pesquisa'));
-  head.append(titleBox,el('span','hc-search-provider','Google · SafeSearch ativo'));
+  const head=el('div','hc-search-head');const titleBox=el('div');
+  titleBox.append(el('span','section-kicker','BUSCA HAPPY CODING'),el('h1','','Resultados'));
+  const queryLine=el('p','hc-search-query');queryLine.id='hcSearchQuery';titleBox.append(queryLine);
+  head.append(titleBox,el('span','hc-search-badge','Proteção ativa'));
   const status=el('p','hc-search-status');status.id='hcSearchStatus';status.setAttribute('role','status');status.setAttribute('aria-live','polite');
   const list=el('div','hc-search-list');list.id='hcSearchList';section.append(head,status,list);q('mainView')?.append(section);return section;
 }
 function hcShowSearchView(query){
-  const section=hcEnsureSearchView();document.querySelectorAll('[data-view-panel]').forEach(view=>view.classList.remove('active'));section.classList.add('active');document.querySelectorAll('[data-view]').forEach(link=>link.classList.remove('active'));const input=q('addressInput');if(input)input.value=query;window.scrollTo({top:0,behavior:'smooth'});
+  const section=hcEnsureSearchView();document.querySelectorAll('[data-view-panel]').forEach(view=>view.classList.remove('active'));section.classList.add('active');document.querySelectorAll('[data-view]').forEach(link=>link.classList.remove('active'));
+  const input=q('addressInput');if(input)input.value=query;const line=q('hcSearchQuery');if(line)line.textContent=`Resultados para “${query}”`;window.scrollTo({top:0,behavior:'smooth'});
 }
 function hcRememberResult(url,title){
   try{const current=JSON.parse(localStorage.getItem(HC_HISTORY_KEY)||'[]');current.unshift({url,title:title||url,at:new Date().toISOString()});localStorage.setItem(HC_HISTORY_KEY,JSON.stringify(current.slice(0,100)));}catch{}
@@ -153,24 +156,32 @@ function hcOpenResult(result){
 function hcRenderSearchResults(payload){
   const list=q('hcSearchList');if(!list)return;list.replaceChildren();
   const results=Array.isArray(payload?.results)?payload.results:[];
-  if(!results.length){list.append(el('div','hc-search-empty','Nenhum resultado disponível.'));return;}
+  if(!results.length){const box=el('div','hc-search-state');box.append(el('span','hc-search-dot'),el('span','','Nenhum resultado encontrado para esta pesquisa.'));list.append(box);return;}
   for(const item of results){
-    let host='';try{host=new URL(item.url).hostname;}catch{continue;}
+    let host='';try{host=new URL(item.url).hostname.replace(/^www\./,'');}catch{continue;}
     const card=el('button','hc-search-card');card.type='button';card.append(el('span','hc-search-host',host),el('strong','',String(item.title||host).slice(0,180)));
     if(item.snippet)card.append(el('p','',String(item.snippet).slice(0,420)));card.addEventListener('click',()=>hcOpenResult(item));list.append(card);
   }
 }
+function hcLoading(){
+  const list=q('hcSearchList');if(!list)return;list.replaceChildren();const box=el('div','hc-search-state');box.append(el('span','hc-search-dot'),el('span','','Pesquisando…'));list.append(box);
+}
+function hcFriendlySearchError(payload,statusCode){
+  if(statusCode===429)return'Muitas pesquisas em pouco tempo. Aguarde um instante e tente novamente.';
+  if(payload?.error==='blocked_query')return'Esta pesquisa foi bloqueada pela proteção obrigatória do Happy Coding.';
+  return'Não foi possível concluir a pesquisa agora. Tente novamente em alguns segundos.';
+}
 async function hcRunSearch(raw){
   const query=String(raw||'').replace(/[\u0000-\u001f\u007f]/g,' ').replace(/\s+/g,' ').trim().slice(0,240);if(!query)return;
   if(hcAdultSearch(query)){q('blockedModal')?.classList.remove('hidden');return;}
-  const version=++hcSearchVersion;hcShowSearchView(query);const status=q('hcSearchStatus'),list=q('hcSearchList');if(status)status.textContent=`Buscando “${query}”…`;list?.replaceChildren(el('div','hc-search-empty','Consultando o Google com SafeSearch ativo…'));
+  const version=++hcSearchVersion;hcShowSearchView(query);const status=q('hcSearchStatus');if(status)status.textContent='';hcLoading();
   try{
     const response=await fetch(HC_WEB_SEARCH_URL,{method:'POST',headers:{'Content-Type':'application/json','apikey':HC_PUBLIC_KEY},body:JSON.stringify({q:query})});
     const payload=await response.json().catch(()=>({}));if(version!==hcSearchVersion)return;
-    if(!response.ok)throw new Error(payload?.message||`Falha na busca (${response.status})`);
-    if(status)status.textContent=`${payload.results?.length||0} resultado(s) · Google · SafeSearch ativo`;hcRenderSearchResults(payload);
+    if(!response.ok)throw Object.assign(new Error('search_failed'),{payload,statusCode:response.status});
+    const count=Array.isArray(payload.results)?payload.results.length:0;if(status)status.textContent=`${count} resultado${count===1?'':'s'}`;hcRenderSearchResults(payload);
   }catch(error){
-    if(version!==hcSearchVersion)return;if(status)status.textContent=error?.message||'Não foi possível pesquisar agora.';if(list){list.replaceChildren();const box=el('div','hc-search-empty','A busca interna falhou. O Happy Coding não vai redirecionar você automaticamente para o Google.');box.append(btn('Tentar novamente',()=>hcRunSearch(query),'secondary-btn hc-search-retry'));list.append(box);}
+    if(version!==hcSearchVersion)return;if(status)status.textContent='Pesquisa indisponível';const list=q('hcSearchList');if(list){list.replaceChildren();const box=el('div','hc-search-state hc-search-error');box.append(el('strong','','Não conseguimos pesquisar agora.'),el('p','',hcFriendlySearchError(error?.payload,error?.statusCode)));box.append(btn('Tentar novamente',()=>hcRunSearch(query),'secondary-btn hc-search-retry'));list.append(box);}
   }
 }
 function hcInterceptSearchForm(form,input,alwaysSearch=false){
