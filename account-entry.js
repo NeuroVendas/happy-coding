@@ -4,7 +4,7 @@ const q=id=>document.getElementById(id);
 const AUTH_KEY='happyCoding.community.auth.v1';
 const API='https://vzfnoaixjgyifutklpwn.supabase.co/rest/v1/';
 const KEY='sb_publishable_nQTrMmVzLt0b1t0y-Ob22g_UwF1eNDD';
-function storedSession(){try{const parsed=JSON.parse(sessionStorage.getItem(AUTH_KEY));const s=parsed?.currentSession||parsed?.session||parsed;return s?.access_token&&s?.user?.id?s:null;}catch{return null;}}
+function storedSession(){try{let raw=localStorage.getItem(AUTH_KEY);if(!raw){raw=sessionStorage.getItem(AUTH_KEY);if(raw)localStorage.setItem(AUTH_KEY,raw);}const parsed=JSON.parse(raw);const s=parsed?.currentSession||parsed?.session||parsed;return s?.access_token&&s?.user?.id?s:null;}catch{return null;}}
 function aal(token){try{const p=token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');return JSON.parse(atob(p.padEnd(p.length+(4-p.length%4)%4,'='))).aal||'aal1';}catch{return'aal1';}}
 
 function addAccountEntryPoints(){
