@@ -4,92 +4,61 @@ Direção confirmada: navegador/workspace funcional para programadores, game dev
 
 ## Estado concluído em 2026-09-08
 
-- Tema original grafite/verde-lima preservado. Não redesenhar sem pedido explícito.
-- Comunidade conectada ao Supabase com RLS, posts pendentes, moderação admin + MFA/AAL2 e denúncias.
-- Conta principal separada da Comunidade em `account.html`.
-- Existe 1 conta real confirmada, 1 fator MFA verificado e 1 membro admin.
-- A conta real `tr.negocios.2022@gmail.com` permanece com membership admin; o problema anterior era persistência de sessão, já corrigida no frontend.
-- Conta, Comunidade e Admin persistem a sessão do Supabase e ações sensíveis continuam exigindo membership + MFA/AAL2.
-- `admin-suite` e `project_sync_notes` estão aplicadas no Supabase.
-- `account-sync.js` sincroniza perfil, favoritos, projetos e notas quando o opt-in está ativo.
-- `bootstrap-admin` permanece permanentemente fechado na versão 2.
+- Tema original grafite/verde-lima preservado.
+- Conta, comunidade, admin/MFA, sync de projetos/notas e admin suite permanecem funcionando no projeto web.
 - Service worker web permanece no cache `v8`.
-- Navegador desktop `/desktop` avançou para **v0.4.0**.
-- Abas múltiplas reais usam um `WebContentsView` isolado por aba.
-- Back/forward por aba usa `webContents.navigationHistory`.
-- Popups remotos viram novas abas controladas, sem privilégio Electron.
-- Atalhos principais de abas/navegação estão implementados.
-- Downloads são controlados no processo principal via `session.will-download` / `DownloadItem`.
-- Usuário escolhe onde salvar pelo diálogo nativo; páginas remotas não recebem caminho do filesystem.
-- Downloads automáticos e extensões sensíveis recebem confirmação extra.
-- Painel local de downloads mostra progresso/estado e permite pausar/retomar quando suportado, cancelar e mostrar arquivo concluído na pasta.
-- Core de navegação e core de classificação de downloads têm testes unitários e fazem parte do CI.
+- Navegador desktop `/desktop` avançou para **v0.6.0**.
+- Abas múltiplas reais com `WebContentsView`, back/forward por aba, popup controlado e atalhos de navegador.
+- Downloads seguros no processo principal com diálogo nativo, progresso, cancelamento e aviso extra para downloads automáticos/extensões sensíveis.
+- Histórico e favoritos desktop persistem localmente no diretório `userData`; páginas remotas não têm acesso à biblioteca.
+- Favoritos possuem estrela/toggle e lista; histórico registra navegações HTTPS, tem limite e limpeza explícita.
+- Sessão das abas persiste somente URLs HTTPS, restaura no máximo 10 abas e somente depois de fechamento limpo.
+- Crash/encerramento não limpo desativa a restauração automática no próximo início para evitar loop de crash.
+- Cores de navegação, download, biblioteca e sessão possuem testes unitários e fazem parte do CI.
 
-## Prioridade atual — tornar o navegador desktop realmente utilizável
+## Prioridade atual — navegador desktop
 
-### 1. Histórico e favoritos desktop
+### 1. Permissões por site
 
-- Persistir localmente em `app.getPath('userData')`, nunca em páginas remotas.
-- Histórico baseado em navegações reais, com limite e limpeza explícita.
-- Favoritos adicionados/removidos pelo chrome local.
-- Página externa nunca lê a biblioteca local.
-- Estrutura preparada para futura sincronização opcional, sem misturar credenciais ou privilégios.
+- Continuar negando câmera, microfone e localização por padrão.
+- Criar decisão explícita do usuário para permissões específicas e por origem.
+- Guardar preferências locais de forma limitada/revogável.
+- Página remota nunca pode conceder a própria permissão.
 
-### 2. Restaurar sessão do navegador
+### 2. Validação real no Windows
 
-- Salvar URLs das abas abertas e aba ativa ao fechar.
-- Restaurar somente URLs revalidadas por `safeTarget`.
-- Limitar número de abas restauradas.
-- Tratar crash sem criar loop de restauração.
+- Abas, atalhos, popups e login/cookies.
+- Restauração após fechamento normal e proteção após encerramento abrupto.
+- Favoritos/histórico entre reinicializações.
+- Downloads reais: diálogo, progresso, cancelamento, pausa/retomada, arquivo sensível e automático.
+- Páginas pesadas e crash de renderer.
 
-### 3. Permissões por site
+### 3. Distribuição
 
-- Continuar negando câmera/mic/localização por padrão.
-- Criar UI explícita para o usuário conceder permissões específicas quando necessário.
-- Página remota nunca altera a política de permissões.
-
-### 4. Downloads — validação Windows
-
-Implementação existe, mas ainda precisa teste real em Windows para:
-- diálogo nativo de salvar;
-- download pequeno/grande;
-- progresso;
-- pausa/retomada em servidor compatível;
-- cancelamento;
-- arquivo executável/script e aviso extra;
-- download iniciado automaticamente;
-- mostrar arquivo concluído na pasta.
-
-A classificação por extensão é uma camada de proteção e **não substitui antivírus/análise de malware**.
-
-### 5. Windows / distribuição
-
-- Testes manuais/end-to-end em Windows.
-- Empacotamento e instalador.
-- Assinatura e atualização automática segura somente com estratégia de custo aprovada.
+- Empacotamento e instalador Windows.
+- Estratégia de assinatura/atualização segura sem custo inesperado; qualquer custo precisa de aprovação.
+- Persistir lista de downloads futuramente sem expor caminhos para páginas externas.
 
 ## Outras frentes pendentes
 
 ### Conta / sincronização
-- testar sincronização real em dois navegadores/dispositivos;
+- testar sincronização real em dois dispositivos;
 - validar conflitos de notas/projetos;
-- manter sincronização opt-in;
-- habilitar proteção contra senhas vazadas no Supabase Auth quando houver configuração disponível.
+- proteção contra senhas vazadas do Supabase Auth continua pendente.
 
 ### Admin
 - suspensão GLOBAL server-side separada de timeout/ban da comunidade;
 - reversão com admin + MFA/AAL2 e audit log;
-- melhorar tratamento de erros no painel.
+- melhorar tratamento de erros do painel.
 
 ### Editor / workspace
 - editor de arquivos por projeto;
-- arquivos/snippets salvos com segurança;
-- preview isolado/sandboxed;
+- snippets e preview isolado;
 - import/export sem execução automática.
 
 ### IA =]
-- melhorar compatibilidade/qualidade local;
-- IA recebe somente arquivos/trechos escolhidos explicitamente pelo usuário.
+- melhorar qualidade/compatibilidade local;
+- receber somente arquivos/trechos escolhidos explicitamente pelo usuário.
 
 ## Regra permanente
 
