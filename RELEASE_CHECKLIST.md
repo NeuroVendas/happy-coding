@@ -9,7 +9,7 @@ Atualizado em 2026-09-08 com estado verificado no GitHub e no Supabase.
 - [x] Tema original preservado.
 - [x] Visitante pode usar sem conta.
 - [x] Projetos e notas locais.
-- [x] Favoritos e histórico locais com telas próprias.
+- [x] Favoritos e histórico locais com telas próprias no web/PWA.
 - [x] Ferramentas JSON, cores, Regex e Focus.
 - [x] IA local opcional, sem chave de API e sem custo por mensagem.
 - [x] Comunidade beta no Supabase com RLS.
@@ -24,12 +24,17 @@ Atualizado em 2026-09-08 com estado verificado no GitHub e no Supabase.
 - [x] Migração e RLS de notas aplicadas/testadas.
 - [x] Sincronização opt-in inclui perfil, favoritos, projetos e notas.
 - [x] Base do navegador desktop criada em `/desktop` usando isolamento de conteúdo remoto.
-- [x] Navegador desktop v0.3.0 possui abas múltiplas reais.
+- [x] Navegador desktop v0.4.0 possui abas múltiplas reais.
 - [x] Cada aba remota mantém `nodeIntegration:false`, `contextIsolation:true`, `sandbox:true` e `webSecurity:true`.
 - [x] Back/forward desktop usa `webContents.navigationHistory` por aba.
-- [x] Popups remotos viram novas abas controladas em vez de novas janelas privilegiadas.
+- [x] Popups remotos viram novas abas controladas.
 - [x] Atalhos principais de navegador implementados no desktop.
-- [x] Core de URL/título/ciclo de abas tem testes unitários e está incluído no CI.
+- [x] Downloads desktop tratados no processo principal via `session.will-download`.
+- [x] Diálogo nativo de salvar é mantido; página remota não recebe o caminho escolhido.
+- [x] Downloads sem gesto direto detectado recebem confirmação adicional.
+- [x] Extensões executáveis/scripts sensíveis recebem aviso explícito antes de continuar.
+- [x] Painel local de downloads mostra progresso/estado, pausa/retomada quando suportada, cancelamento e ação de mostrar na pasta.
+- [x] Core de URL/título/ciclo de abas e core de classificação de downloads têm testes unitários no CI.
 - [x] Service worker web permanece no cache `v8`.
 
 ## Segurança — estado atual
@@ -42,7 +47,9 @@ Atualizado em 2026-09-08 com estado verificado no GitHub e no Supabase.
 - [x] Persistência do login não altera as regras de autorização.
 - [x] Conteúdo web remoto no desktop não recebe Node/Electron APIs.
 - [x] Permissões remotas sensíveis são negadas por padrão nesta etapa.
-- [x] Navegação desktop normaliza para HTTPS/SafeSearch e não carrega `javascript:`, `data:`, `file:` ou outros esquemas não permitidos.
+- [x] Navegação desktop normaliza para HTTPS/SafeSearch e não carrega esquemas não permitidos diretamente.
+- [x] Downloads são controlados fora da página remota; caminho local não é exposto ao site.
+- [x] Classificação de extensão sensível é tratada como camada de proteção, não como antivírus.
 - [ ] Security Advisor ainda mostra 1 aviso: **Leaked Password Protection Disabled**.
 
 ## Precisa de teste real adicional
@@ -51,7 +58,8 @@ Atualizado em 2026-09-08 com estado verificado no GitHub e no Supabase.
 - [ ] Validar conflito de notas/projetos entre dispositivos.
 - [ ] Testar anúncio/evento pelo painel web real com sessão AAL2.
 - [ ] Testar timeout/ban/revogação pelo painel web real contra uma segunda conta real.
-- [ ] Testar desktop v0.3.0 em Windows: criar muitas abas, fechar, restaurar, trocar com atalhos e navegar em sites reais.
+- [ ] Testar desktop v0.4.0 em Windows: abas, atalhos, sites reais e login/cookies.
+- [ ] Testar downloads no Windows: escolher local, pequeno/grande, cancelar, pausar/retomar, arquivo sensível e download automático.
 - [ ] Testes end-to-end de crash/reload/render process no desktop.
 
 ## Bloqueado / etapa futura com custo externo
@@ -81,8 +89,8 @@ Atualizado em 2026-09-08 com estado verificado no GitHub e no Supabase.
 - [x] Popup/new-window convertido em nova aba controlada.
 - [x] Back/forward por aba com API atual do Electron.
 - [x] Atalhos principais de abas/navegação.
-- [ ] Downloads seguros com confirmação, progresso e lista de downloads.
-- [ ] Histórico/favoritos integrados ao desktop.
+- [x] Downloads seguros com escolha explícita de local, progresso e controles.
+- [ ] Histórico/favoritos persistentes integrados ao desktop.
 - [ ] Restaurar abas/sessão após reiniciar o app.
 - [ ] Permissões granulares por site.
 - [ ] Filtro de navegação em nível do processo principal.
