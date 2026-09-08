@@ -34,7 +34,7 @@ contextBridge.exposeInMainWorld('happyDesktop',Object.freeze({
   onBrowserState:listener('hc:browser-state',state=>({
     activeTabId:id(state?.activeTabId),
     tabs:Array.isArray(state?.tabs)?state.tabs.slice(0,20).map(tab=>({
-      id:id(tab?.id),title:String(tab?.title||'Nova aba').slice(0,80),url:String(tab?.url||'').slice(0,4096),loading:!!tab?.loading,error:String(tab?.error||'').slice(0,160),canGoBack:!!tab?.canGoBack,canGoForward:!!tab?.canGoForward
+      id:id(tab?.id),title:String(tab?.title||'Nova aba').slice(0,80),url:String(tab?.url||'').slice(0,4096),kind:tab?.kind==='search'?'search':'remote',searchQuery:String(tab?.searchQuery||'').slice(0,512),loading:!!tab?.loading,error:String(tab?.error||'').slice(0,160),canGoBack:!!tab?.canGoBack,canGoForward:!!tab?.canGoForward
     })):[]
   })),
   onDownloadsState:listener('hc:downloads-state',items=>Array.isArray(items)?items.slice(0,100).map(item=>({
@@ -45,5 +45,7 @@ contextBridge.exposeInMainWorld('happyDesktop',Object.freeze({
     history:Array.isArray(value?.history)?value.history.slice(0,1000).map(item=>libraryItem(item,'visitedAt')):[]
   })),
   onFocusAddress:listener('hc:focus-address',()=>true),
+  onOpenDownloads:listener('hc:open-downloads',()=>true),
+  onOpenHistory:listener('hc:open-history',()=>true),
   onNotice:listener('hc:notice',value=>String(value||'').slice(0,200))
 }));
