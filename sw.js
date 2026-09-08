@@ -3,7 +3,7 @@
 // Bump the version whenever an offline shell file changes.
 const SCOPE = new URL(self.registration.scope);
 const CACHE_PREFIX = `happy-coding:${SCOPE.href}:`;
-const CACHE = `${CACHE_PREFIX}v5`;
+const CACHE = `${CACHE_PREFIX}v6`;
 const CORE = [
   './', './index.html', './styles.css', './original-overrides.css',
   './accessibility-pwa.css', './sync-hook.js', './app.js', './ai-local.js',
@@ -16,7 +16,6 @@ const CORE = [
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE);
-    // Only this public, explicit shell is cached; never account/API responses.
     await cache.addAll(CORE.map(url => new Request(url, {cache: 'reload', credentials: 'omit'})));
     await self.skipWaiting();
   })());
@@ -39,13 +38,11 @@ self.addEventListener('fetch', event => {
   const navigation = request.mode === 'navigate';
   if (!navigation && !CORE.includes(url.href)) return;
   event.respondWith((async () => {
-    try {
-      return await fetch(request);
-    } catch {
+    try { return await fetch(request); }
+    catch {
       const cache = await caches.open(CACHE);
       const fallback = navigation ? new URL('index.html', SCOPE).href : request;
-      const cached = await cache.match(fallback);
-      return cached || Response.error();
+      return await cache.match(fallback) || Response.error();
     }
   })());
 });
