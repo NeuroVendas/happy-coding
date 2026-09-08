@@ -2,217 +2,40 @@ const API='https://vzfnoaixjgyifutklpwn.supabase.co/rest/v1/';
 const PUBLIC_KEY='sb_publishable_nQTrMmVzLt0b1t0y-Ob22g_UwF1eNDD';
 const AUTH_KEY='happyCoding.community.auth.v1';
 const ENABLED_KEY='happyCoding.cloudSync.enabled.v1';
-const KEYS={
-  profile:'happyCoding.profile.v1',
-  projects:'happyCoding.projects.v1',
-  notes:'happyCoding.projectNotes.v1',
-  bookmarks:'happyCoding.bookmarks.v1'
-};
-
+const KEYS={profile:'happyCoding.profile.v1',projects:'happyCoding.projects.v1',notes:'happyCoding.projectNotes.v1',bookmarks:'happyCoding.bookmarks.v1'};
 let applying=false,hydrated=false,busy=false,timer=null,lastUserId=null;
 const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fallback}catch{return fallback}};
 const rawWrite=(key,value)=>{applying=true;try{localStorage.setItem(key,JSON.stringify(value))}finally{applying=false}};
 const enabled=()=>localStorage.getItem(ENABLED_KEY)==='true';
 const uuid=value=>/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value||''));
-
-function session(){
-  try{
-    const raw=sessionStorage.getItem(AUTH_KEY);if(!raw)return null;
-    const parsed=JSON.parse(raw);
-    const current=parsed?.currentSession||parsed?.session||parsed;
-    return current?.access_token&&current?.user?.id?current:null;
-  }catch{return null;}
-}
+function parseStored(raw){try{if(!raw)return null;if(raw.startsWith('base64-'))raw=atob(raw.slice(7));const parsed=JSON.parse(raw);const current=parsed?.currentSession||parsed?.session||parsed;return current?.access_token&&current?.user?.id?current:null;}catch{return null;}}
+function session(){return parseStored(sessionStorage.getItem(AUTH_KEY))||parseStored(localStorage.getItem(AUTH_KEY));}
 function apiError(text,status){const e=new Error(`sync ${status}`);e.details=text;return e;}
-async function request(path,{method='GET',body,prefer}={}){
-  const s=session();if(!s)throw new Error('not_signed_in');
-  const headers={apikey:PUBLIC_KEY,Authorization:`Bearer ${s.access_token}`,Accept:'application/json'};
-  if(body!==undefined)headers['Content-Type']='application/json';
-  if(prefer)headers.Prefer=prefer;
-  const response=await fetch(API+path,{method,headers,body:body===undefined?undefined:JSON.stringify(body)});
-  const text=await response.text();
-  if(!response.ok)throw apiError(text,response.status);
-  return text?JSON.parse(text):null;
-}
-function setStatus(text,state=''){
-  const el=document.getElementById('cloudSyncStatus');if(!el)return;
-  el.textContent=text;el.dataset.state=state;
-}
-function refreshLocalUi(){
-  window.setupProfile?.();window.renderProjects?.();window.updateSettingsCounts?.();
-  const view=location.hash.slice(1);if(view==='bookmarks')window.renderCollection?.('bookmarks');
-}
-function cloudEngine(engine){
-  const value=String(engine||'');
-  if(value.startsWith('Godot'))return 'Godot 4';
-  if(value.startsWith('Unity'))return 'Unity';
-  if(value.startsWith('Unreal'))return 'Unreal Engine';
-  if(/Phaser|Web|JavaScript|TypeScript/i.test(value))return 'Web / Phaser';
-  return 'Outro';
-}
-function displayEngine(engine){
-  if(engine==='Godot 4')return 'Godot 4 · GDScript';
-  if(engine==='Unity')return 'Unity · C#';
-  if(engine==='Web / Phaser')return 'Web / Phaser';
-  return engine||'Outro';
-}
-function cloudProject(row,local){
-  return {
-    id:row.id,
-    name:row.name,
-    engine:local?.engine||displayEngine(row.engine),
-    short:local?.short||'Cloud',
-    icon:local?.icon||'☁',
-    description:row.description||'',
-    edited:'sincronizado com a conta',
-    version:'cloud'
-  };
-}
-function normalizeLocalProjectIds(){
-  let projects=read(KEYS.projects,[]),notes=read(KEYS.notes,{}),changed=false;
-  projects=projects.map(project=>{
-    if(uuid(project.id))return project;
-    if(!crypto.randomUUID)return project;
-    const next=crypto.randomUUID();
-    if(Object.prototype.hasOwnProperty.call(notes,project.id)){notes[next]=notes[project.id];delete notes[project.id];}
-    changed=true;return {...project,id:next};
-  });
-  if(changed){rawWrite(KEYS.projects,projects);rawWrite(KEYS.notes,notes);refreshLocalUi();}
-  return projects;
-}
-async function ensureSettings(userId){
-  await request('hc_user_settings?on_conflict=user_id',{method:'POST',prefer:'resolution=merge-duplicates,return=minimal',body:{user_id:userId,theme:'system',search_engine:'google',safe_search:true,content_filter:'strict',game_content_warnings:true}});
-}
-async function mergeProfile(userId){
-  const rows=await request(`hc_profiles?select=user_id,display_name&user_id=eq.${encodeURIComponent(userId)}`);
-  const local=read(KEYS.profile,{name:'Visitante'});
-  if(rows?.length){rawWrite(KEYS.profile,{name:rows[0].display_name});refreshLocalUi();return;}
-  const name=String(local.name||'Visitante').trim();
-  if(name&&name!=='Visitante')await request('hc_profiles?on_conflict=user_id',{method:'POST',prefer:'resolution=merge-duplicates,return=minimal',body:{user_id:userId,display_name:name}});
-}
-async function pushProfile(userId){
-  const name=String(read(KEYS.profile,{name:'Visitante'}).name||'Visitante').trim();
-  if(!name||name==='Visitante')return;
-  await request('hc_profiles?on_conflict=user_id',{method:'POST',prefer:'resolution=merge-duplicates,return=minimal',body:{user_id:userId,display_name:name}});
-}
-async function mergeProjects(userId){
-  const local=normalizeLocalProjectIds();
-  let cloud=await request(`hc_projects?select=id,name,engine,description,created_at&owner_id=eq.${encodeURIComponent(userId)}&order=created_at.desc`);
-  const cloudIds=new Set((cloud||[]).map(row=>row.id));
-  const missing=local.filter(project=>uuid(project.id)&&!cloudIds.has(project.id));
-  if(missing.length){
-    await request('hc_projects',{method:'POST',prefer:'return=minimal',body:missing.map(project=>({id:project.id,owner_id:userId,name:String(project.name||'Projeto').slice(0,120),engine:cloudEngine(project.engine),description:String(project.description||'').slice(0,4000)}))});
-    cloud=await request(`hc_projects?select=id,name,engine,description,created_at&owner_id=eq.${encodeURIComponent(userId)}&order=created_at.desc`);
-  }
-  const localById=new Map(local.map(project=>[project.id,project]));
-  rawWrite(KEYS.projects,(cloud||[]).map(row=>cloudProject(row,localById.get(row.id))));
-  refreshLocalUi();
-}
-async function mirrorProjects(userId){
-  const local=normalizeLocalProjectIds().filter(project=>uuid(project.id));
-  if(local.length){
-    await request('hc_projects?on_conflict=id',{method:'POST',prefer:'resolution=merge-duplicates,return=minimal',body:local.map(project=>({id:project.id,owner_id:userId,name:String(project.name||'Projeto').slice(0,120),engine:cloudEngine(project.engine),description:String(project.description||'').slice(0,4000)}))});
-  }
-  const cloud=await request(`hc_projects?select=id&owner_id=eq.${encodeURIComponent(userId)}`);
-  const localIds=new Set(local.map(project=>project.id));
-  for(const row of cloud||[])if(!localIds.has(row.id))await request(`hc_projects?id=eq.${encodeURIComponent(row.id)}&owner_id=eq.${encodeURIComponent(userId)}`,{method:'DELETE'});
-}
-function cleanBookmarks(items){
-  const seen=new Set();return (items||[]).filter(item=>{const url=String(item?.url||'').trim();if(!url||seen.has(url))return false;seen.add(url);return true;}).map(item=>({url:String(item.url),title:String(item.title||item.url).slice(0,200)}));
-}
-async function mergeBookmarks(userId){
-  const local=cleanBookmarks(read(KEYS.bookmarks,[]));
-  let cloud=await request(`hc_bookmarks?select=id,title,url,created_at&user_id=eq.${encodeURIComponent(userId)}&order=created_at.desc`);
-  const urls=new Set((cloud||[]).map(row=>row.url));
-  const missing=local.filter(item=>!urls.has(item.url));
-  if(missing.length){await request('hc_bookmarks',{method:'POST',prefer:'return=minimal',body:missing.map(item=>({user_id:userId,title:item.title,url:item.url}))});cloud=await request(`hc_bookmarks?select=id,title,url,created_at&user_id=eq.${encodeURIComponent(userId)}&order=created_at.desc`);}
-  rawWrite(KEYS.bookmarks,(cloud||[]).map(row=>({id:row.id,title:row.title,url:row.url})));
-  refreshLocalUi();
-}
-async function mirrorBookmarks(userId){
-  const local=cleanBookmarks(read(KEYS.bookmarks,[]));
-  const cloud=await request(`hc_bookmarks?select=id,title,url&user_id=eq.${encodeURIComponent(userId)}`);
-  const localUrls=new Set(local.map(item=>item.url));
-  const cloudUrls=new Set((cloud||[]).map(item=>item.url));
-  for(const row of cloud||[])if(!localUrls.has(row.url))await request(`hc_bookmarks?id=eq.${encodeURIComponent(row.id)}&user_id=eq.${encodeURIComponent(userId)}`,{method:'DELETE'});
-  const missing=local.filter(item=>!cloudUrls.has(item.url));
-  if(missing.length)await request('hc_bookmarks',{method:'POST',prefer:'return=minimal',body:missing.map(item=>({user_id:userId,title:item.title,url:item.url}))});
-}
-async function initialMerge(){
-  const s=session();if(!s)throw new Error('not_signed_in');
-  await ensureSettings(s.user.id);
-  await mergeProfile(s.user.id);
-  await mergeProjects(s.user.id);
-  await mergeBookmarks(s.user.id);
-  hydrated=true;lastUserId=s.user.id;
-}
-async function pushLocal(){
-  const s=session();if(!s)throw new Error('not_signed_in');
-  await pushProfile(s.user.id);
-  await mirrorProjects(s.user.id);
-  await mirrorBookmarks(s.user.id);
-  lastUserId=s.user.id;
-}
-async function sync({merge=false}={}){
-  if(busy)return;
-  const s=session();
-  if(!s){hydrated=false;setStatus('Entre na sua conta para sincronizar.','offline');return;}
-  busy=true;setStatus(merge||!hydrated?'Sincronizando conta…':'Salvando alterações…','busy');
-  try{
-    if(merge||!hydrated||lastUserId!==s.user.id)await initialMerge();else await pushLocal();
-    setStatus('Sincronizado ✓ · notas dos projetos ainda ficam neste dispositivo.','ok');
-  }catch(error){
-    console.error('Happy Coding sync:',error);
-    if(error.message==='not_signed_in')setStatus('Entre na sua conta para sincronizar.','offline');
-    else setStatus('Não foi possível sincronizar agora. Seus dados locais continuam seguros.','error');
-  }finally{busy=false;updateButtons();}
-}
-function schedule(){
-  if(!enabled()||applying||!hydrated)return;
-  clearTimeout(timer);timer=setTimeout(()=>sync(),700);
-}
-function updateButtons(){
-  const toggle=document.getElementById('cloudSyncToggle'),now=document.getElementById('cloudSyncNow');if(!toggle||!now)return;
-  toggle.textContent=enabled()?'Desativar sincronização':'Ativar sincronização';
-  now.classList.toggle('hidden',!enabled());
-  toggle.disabled=busy;now.disabled=busy;
-}
-function installUi(){
-  const list=document.querySelector('[data-view-panel="settings"] .settings-list');if(!list||document.getElementById('cloudSyncCard'))return;
-  const card=document.createElement('article');card.id='cloudSyncCard';
-  const info=document.createElement('div');
-  const title=document.createElement('strong');title.textContent='Sincronização da conta (beta)';
-  const copy=document.createElement('small');copy.textContent='Sincroniza perfil, favoritos e projetos entre dispositivos. As notas dos projetos continuam locais nesta fase.';
-  info.append(title,copy);
-  const controls=document.createElement('div');controls.className='inline-actions';
-  const toggle=document.createElement('button');toggle.id='cloudSyncToggle';toggle.className='secondary-btn';toggle.type='button';
-  const now=document.createElement('button');now.id='cloudSyncNow';now.className='secondary-btn';now.type='button';now.textContent='Sincronizar agora';
-  const status=document.createElement('small');status.id='cloudSyncStatus';status.setAttribute('role','status');status.setAttribute('aria-live','polite');
-  controls.append(toggle,now,status);card.append(info,controls);list.append(card);
-  toggle.addEventListener('click',async()=>{
-    if(enabled()){
-      localStorage.setItem(ENABLED_KEY,'false');hydrated=false;setStatus('Sincronização desativada. Os dados já salvos na conta não são apagados.');updateButtons();return;
-    }
-    if(!session()){
-      window.toast?.('Entre na sua conta pela Comunidade primeiro.');window.showView?.('community');return;
-    }
-    localStorage.setItem(ENABLED_KEY,'true');hydrated=false;updateButtons();await sync({merge:true});
-  });
-  now.addEventListener('click',()=>sync({merge:!hydrated}));
-  updateButtons();
-  if(enabled())sync({merge:true});else setStatus('Desativada por padrão. Ative quando quiser usar seus dados em outro dispositivo.');
-}
-
-document.addEventListener('happy:local-data-changed',event=>{
-  if(applying)return;
-  if([KEYS.profile,KEYS.projects,KEYS.bookmarks].includes(event.detail?.key))schedule();
-  if(event.detail?.key===KEYS.notes&&enabled())setStatus('Notas salvas localmente. Sincronização de notas vem na próxima etapa.');
-});
-document.addEventListener('happy:session-data-changed',event=>{
-  if(event.detail?.key!==AUTH_KEY||!enabled())return;
-  const s=session();if(!s){hydrated=false;lastUserId=null;setStatus('Sessão encerrada. Dados locais continuam neste dispositivo.');return;}
-  if(s.user.id!==lastUserId){hydrated=false;sync({merge:true});}
-});
+async function request(path,{method='GET',body,prefer}={}){const s=session();if(!s)throw new Error('not_signed_in');const headers={apikey:PUBLIC_KEY,Authorization:`Bearer ${s.access_token}`,Accept:'application/json'};if(body!==undefined)headers['Content-Type']='application/json';if(prefer)headers.Prefer=prefer;const response=await fetch(API+path,{method,headers,body:body===undefined?undefined:JSON.stringify(body)});const text=await response.text();if(!response.ok)throw apiError(text,response.status);return text?JSON.parse(text):null;}
+function setStatus(text,state=''){const node=document.getElementById('cloudSyncStatus');if(node){node.textContent=text;node.dataset.state=state;}document.dispatchEvent(new CustomEvent('happy:sync-status',{detail:{text,state}}));}
+function refreshLocalUi(){window.setupProfile?.();window.renderProjects?.();window.updateSettingsCounts?.();const view=location.hash.slice(1);if(view==='bookmarks')window.renderCollection?.('bookmarks');}
+function cloudEngine(engine){const value=String(engine||'');if(value.startsWith('Godot'))return'Godot 4';if(value.startsWith('Unity'))return'Unity';if(value.startsWith('Unreal'))return'Unreal Engine';if(/Phaser|Web|JavaScript|TypeScript/i.test(value))return'Web / Phaser';return'Outro';}
+function displayEngine(engine){if(engine==='Godot 4')return'Godot 4 · GDScript';if(engine==='Unity')return'Unity · C#';if(engine==='Web / Phaser')return'Web / Phaser';return engine||'Outro';}
+function cloudProject(row,local){return{id:row.id,name:row.name,engine:local?.engine||displayEngine(row.engine),short:local?.short||'Cloud',icon:local?.icon||'☁',description:row.description||'',edited:'sincronizado com a conta',version:'cloud'};}
+function normalizeLocalProjectIds(){let projects=read(KEYS.projects,[]),notes=read(KEYS.notes,{}),changed=false;projects=projects.map(project=>{if(uuid(project.id))return project;if(!crypto.randomUUID)return project;const next=crypto.randomUUID();if(Object.prototype.hasOwnProperty.call(notes,project.id)){notes[next]=notes[project.id];delete notes[project.id];}changed=true;return{...project,id:next};});if(changed){rawWrite(KEYS.projects,projects);rawWrite(KEYS.notes,notes);refreshLocalUi();}return projects;}
+async function ensureSettings(userId){await request('hc_user_settings?on_conflict=user_id',{method:'POST',prefer:'resolution=merge-duplicates,return=minimal',body:{user_id:userId,theme:'system',search_engine:'google',safe_search:true,content_filter:'strict',game_content_warnings:true}});}
+async function mergeProfile(userId){const rows=await request(`hc_profiles?select=user_id,display_name&user_id=eq.${encodeURIComponent(userId)}`);const local=read(KEYS.profile,{name:'Visitante'});if(rows?.length){rawWrite(KEYS.profile,{name:rows[0].display_name});refreshLocalUi();return;}const name=String(local.name||'Visitante').trim();if(name&&name!=='Visitante')await request('hc_profiles?on_conflict=user_id',{method:'POST',prefer:'resolution=merge-duplicates,return=minimal',body:{user_id:userId,display_name:name}});}
+async function pushProfile(userId){const name=String(read(KEYS.profile,{name:'Visitante'}).name||'Visitante').trim();if(!name||name==='Visitante')return;await request('hc_profiles?on_conflict=user_id',{method:'POST',prefer:'resolution=merge-duplicates,return=minimal',body:{user_id:userId,display_name:name}});}
+async function mergeProjects(userId){const local=normalizeLocalProjectIds();let cloud=await request(`hc_projects?select=id,name,engine,description,created_at&owner_id=eq.${encodeURIComponent(userId)}&order=created_at.desc`);const cloudIds=new Set((cloud||[]).map(row=>row.id));const missing=local.filter(project=>uuid(project.id)&&!cloudIds.has(project.id));if(missing.length){await request('hc_projects',{method:'POST',prefer:'return=minimal',body:missing.map(project=>({id:project.id,owner_id:userId,name:String(project.name||'Projeto').slice(0,120),engine:cloudEngine(project.engine),description:String(project.description||'').slice(0,4000)}))});cloud=await request(`hc_projects?select=id,name,engine,description,created_at&owner_id=eq.${encodeURIComponent(userId)}&order=created_at.desc`);}const localById=new Map(local.map(project=>[project.id,project]));rawWrite(KEYS.projects,(cloud||[]).map(row=>cloudProject(row,localById.get(row.id))));refreshLocalUi();}
+async function mirrorProjects(userId){const local=normalizeLocalProjectIds().filter(project=>uuid(project.id));if(local.length)await request('hc_projects?on_conflict=id',{method:'POST',prefer:'resolution=merge-duplicates,return=minimal',body:local.map(project=>({id:project.id,owner_id:userId,name:String(project.name||'Projeto').slice(0,120),engine:cloudEngine(project.engine),description:String(project.description||'').slice(0,4000)}))});const cloud=await request(`hc_projects?select=id&owner_id=eq.${encodeURIComponent(userId)}`);const localIds=new Set(local.map(project=>project.id));for(const row of cloud||[])if(!localIds.has(row.id))await request(`hc_projects?id=eq.${encodeURIComponent(row.id)}&owner_id=eq.${encodeURIComponent(userId)}`,{method:'DELETE'});}
+function cleanBookmarks(items){const seen=new Set();return(items||[]).filter(item=>{const url=String(item?.url||'').trim();if(!url||seen.has(url))return false;seen.add(url);return true;}).map(item=>({url:String(item.url),title:String(item.title||item.url).slice(0,200)}));}
+async function mergeBookmarks(userId){const local=cleanBookmarks(read(KEYS.bookmarks,[]));let cloud=await request(`hc_bookmarks?select=id,title,url,created_at&user_id=eq.${encodeURIComponent(userId)}&order=created_at.desc`);const urls=new Set((cloud||[]).map(row=>row.url));const missing=local.filter(item=>!urls.has(item.url));if(missing.length){await request('hc_bookmarks',{method:'POST',prefer:'return=minimal',body:missing.map(item=>({user_id:userId,title:item.title,url:item.url}))});cloud=await request(`hc_bookmarks?select=id,title,url,created_at&user_id=eq.${encodeURIComponent(userId)}&order=created_at.desc`);}rawWrite(KEYS.bookmarks,(cloud||[]).map(row=>({id:row.id,title:row.title,url:row.url})));refreshLocalUi();}
+async function mirrorBookmarks(userId){const local=cleanBookmarks(read(KEYS.bookmarks,[]));const cloud=await request(`hc_bookmarks?select=id,title,url&user_id=eq.${encodeURIComponent(userId)}`);const localUrls=new Set(local.map(item=>item.url)),cloudUrls=new Set((cloud||[]).map(item=>item.url));for(const row of cloud||[])if(!localUrls.has(row.url))await request(`hc_bookmarks?id=eq.${encodeURIComponent(row.id)}&user_id=eq.${encodeURIComponent(userId)}`,{method:'DELETE'});const missing=local.filter(item=>!cloudUrls.has(item.url));if(missing.length)await request('hc_bookmarks',{method:'POST',prefer:'return=minimal',body:missing.map(item=>({user_id:userId,title:item.title,url:item.url}))});}
+async function initialMerge(){const s=session();if(!s)throw new Error('not_signed_in');await ensureSettings(s.user.id);await mergeProfile(s.user.id);await mergeProjects(s.user.id);await mergeBookmarks(s.user.id);hydrated=true;lastUserId=s.user.id;}
+async function pushLocal(){const s=session();if(!s)throw new Error('not_signed_in');await pushProfile(s.user.id);await mirrorProjects(s.user.id);await mirrorBookmarks(s.user.id);lastUserId=s.user.id;}
+async function sync({merge=false}={}){if(busy)return;const s=session();if(!s){hydrated=false;setStatus('Entre na sua Conta para sincronizar.','offline');return;}busy=true;setStatus(merge||!hydrated?'Sincronizando conta…':'Salvando alterações…','busy');try{if(merge||!hydrated||lastUserId!==s.user.id)await initialMerge();else await pushLocal();setStatus('Sincronizado ✓ · notas dos projetos ainda ficam neste dispositivo.','ok');}catch(error){console.error('Happy Coding sync:',error);if(error.message==='not_signed_in')setStatus('Entre na sua Conta para sincronizar.','offline');else setStatus('Não foi possível sincronizar agora. Seus dados locais continuam seguros.','error');}finally{busy=false;updateButtons();}}
+function schedule(){if(!enabled()||applying||!hydrated)return;clearTimeout(timer);timer=setTimeout(()=>sync(),700);}
+function updateButtons(){const toggle=document.getElementById('cloudSyncToggle'),now=document.getElementById('cloudSyncNow');if(!toggle||!now)return;toggle.textContent=enabled()?'Desativar sincronização':'Ativar sincronização';now.classList.toggle('hidden',!enabled());toggle.disabled=busy;now.disabled=busy;}
+async function setEnabled(value){localStorage.setItem(ENABLED_KEY,String(!!value));if(!value){hydrated=false;setStatus('Sincronização desativada. Os dados já salvos na conta não são apagados.');updateButtons();return true;}if(!session()){setStatus('Entre na sua Conta primeiro.','offline');updateButtons();return false;}hydrated=false;updateButtons();await sync({merge:true});return true;}
+function installUi(){const list=document.querySelector('[data-view-panel="settings"] .settings-list');if(!list||document.getElementById('cloudSyncCard'))return;const card=document.createElement('article');card.id='cloudSyncCard';const info=document.createElement('div');const title=document.createElement('strong');title.textContent='Sincronização da conta (beta)';const copy=document.createElement('small');copy.textContent='Sincroniza perfil, favoritos e projetos. Login e segurança ficam em Conta; notas dos projetos continuam locais nesta fase.';info.append(title,copy);const controls=document.createElement('div');controls.className='inline-actions';const toggle=document.createElement('button');toggle.id='cloudSyncToggle';toggle.className='secondary-btn';toggle.type='button';const now=document.createElement('button');now.id='cloudSyncNow';now.className='secondary-btn';now.type='button';now.textContent='Sincronizar agora';const account=document.createElement('a');account.className='secondary-btn';account.href='account.html';account.textContent='Abrir Conta';const status=document.createElement('small');status.id='cloudSyncStatus';status.setAttribute('role','status');status.setAttribute('aria-live','polite');controls.append(toggle,now,account,status);card.append(info,controls);list.append(card);toggle.addEventListener('click',async()=>{if(enabled()){await setEnabled(false);return;}if(!session()){window.toast?.('Entre na sua Conta primeiro.');location.href='account.html';return;}await setEnabled(true);});now.addEventListener('click',()=>sync({merge:!hydrated}));updateButtons();if(enabled())sync({merge:true});else setStatus('Desativada por padrão. Ative quando quiser usar seus dados em outro dispositivo.');}
+document.addEventListener('happy:local-data-changed',event=>{if(applying)return;if([KEYS.profile,KEYS.projects,KEYS.bookmarks].includes(event.detail?.key))schedule();if(event.detail?.key===KEYS.notes&&enabled())setStatus('Notas salvas localmente. Sincronização de notas vem na próxima etapa.');});
+document.addEventListener('happy:session-data-changed',event=>{if(event.detail?.key!==AUTH_KEY||!enabled())return;const s=session();if(!s){hydrated=false;lastUserId=null;setStatus('Sessão encerrada. Dados locais continuam neste dispositivo.');return;}if(s.user.id!==lastUserId){hydrated=false;sync({merge:true});}});
 document.addEventListener('happy:view',event=>{if(event.detail==='settings'){installUi();updateButtons();}});
-window.happyCloud={syncNow:()=>sync({merge:!hydrated}),isEnabled:enabled};
+window.happyCloud={syncNow:()=>sync({merge:!hydrated}),isEnabled:enabled,setEnabled};
 installUi();
+import('./account-entry.js').catch(()=>{});
