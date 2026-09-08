@@ -1,0 +1,48 @@
+name: Build Happy Coding Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'desktop/**'
+      - '.github/workflows/desktop-windows.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: happy-coding-windows-build
+  cancel-in-progress: true
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install desktop dependencies
+        run: npm install --no-audit --no-fund
+      - name: Check desktop JavaScript
+        run: npm run check
+      - name: Test desktop core
+        run: npm test
+      - name: Build Windows x64 distributables
+        run: npm run make:win
+      - name: List distributables
+        shell: powershell
+        run: Get-ChildItem -Path out\make -Recurse -File | Select-Object FullName,Length
+      - name: Upload Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: Happy-Coding-Windows-v0.7.0
+          path: desktop/out/make/**/*
+          if-no-files-found: error
+          retention-days: 30
