@@ -10,7 +10,10 @@ function looksLikeHost(value){return /^(localhost|([a-z0-9-]+\.)+[a-z]{2,})(:\d{
 function safeTarget(raw){
   const value=compactInput(raw);
   if(!value||/^happy:\/\/home$/i.test(value))return HOME;
-  if(!/^[a-z][a-z0-9+.-]*:/i.test(value))return looksLikeHost(value)?`https://${value}`:searchTarget(value);
+  if(!/^[a-z][a-z0-9+.-]*:/i.test(value)){
+    if(!looksLikeHost(value))return searchTarget(value);
+    try{return new URL(`https://${value}`).href;}catch{return searchTarget(value);}
+  }
   try{
     const url=new URL(value);
     if(url.protocol==='https:')return url.href;
