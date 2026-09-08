@@ -56,6 +56,7 @@ Prioridade de custo: **0 sempre que possível**. Não ativar cobrança, domínio
 - Não prometer segurança/filtragem perfeita.
 - Conteúdo remoto do desktop nunca recebe Node.js/Electron APIs.
 - Não desativar `webSecurity`, sandbox ou context isolation para “fazer funcionar”.
+- Página remota nunca recebe acesso direto ao filesystem local.
 
 ## Estado real — conta/Supabase
 
@@ -110,7 +111,7 @@ Estado do service worker web: cache `v8`.
 
 Não confundir o PWA com o browser desktop completo.
 
-## Navegador desktop — estado atual v0.3.0
+# Navegador desktop — estado atual v0.4.0
 
 Pasta: `/desktop`.
 
@@ -120,10 +121,12 @@ Arquivos principais:
 - `desktop/chrome.html`
 - `desktop/chrome.js`
 - `desktop/browser-core.js`
+- `desktop/download-core.js`
 - `desktop/tests/browser-core.test.cjs`
+- `desktop/tests/download-core.test.cjs`
 - `desktop/package.json`
 
-### Arquitetura
+## Arquitetura
 
 - `BaseWindow` hospeda o chrome local privilegiado e views remotas separadas.
 - `chrome.html` é local e usa preload mínimo.
@@ -137,19 +140,19 @@ Arquivos principais:
 - Permissões sensíveis são negadas por padrão nesta etapa.
 - IPC valida `sender` e expõe apenas ações específicas de navegador.
 
-### Abas reais implementadas
+## Abas reais implementadas
 
 - criar nova aba;
 - ativar aba;
 - fechar aba;
 - até 20 abas nesta versão;
-- restaurar última aba fechada (stack de até 10 URLs);
+- restaurar última aba fechada;
 - popup/new-window remoto vira nova aba controlada;
 - cada aba tem título real, URL, loading, erro, canGoBack e canGoForward;
-- cada aba preserva seu próprio histórico Chromium;
-- views inativas ficam invisíveis, não são recriadas ao trocar de aba.
+- cada aba preserva histórico Chromium próprio;
+- views inativas ficam invisíveis, não são recriadas ao trocar.
 
-### Navegação
+## Navegação
 
 `desktop/browser-core.js` centraliza normalização:
 - `happy://home` -> site Happy Coding;
@@ -159,11 +162,10 @@ Arquivos principais:
 - texto comum -> Google Search com `safe=active`;
 - `javascript:`, `data:`, `file:`, `ftp:` e esquemas não permitidos não são carregados diretamente; viram pesquisa segura.
 
-Back/forward usam `webContents.navigationHistory`, não as APIs antigas depreciadas de `webContents.goBack/canGoBack`.
+Back/forward usam `webContents.navigationHistory`, não APIs antigas depreciadas.
 
-### Atalhos desktop
+## Atalhos desktop implementados
 
-Implementados tanto quando foco está no chrome quanto quando foco está na página remota:
 - `Ctrl+L` foco na barra;
 - `Ctrl+T` nova aba;
 - `Ctrl+W` fechar aba;
@@ -174,24 +176,75 @@ Implementados tanto quando foco está no chrome quanto quando foco está na pág
 - `Alt+Left` voltar;
 - `Alt+Right` avançar.
 
-### Testes desktop
+O painel de downloads possui botão dedicado no chrome local. `Ctrl+J` funciona quando o foco está no chrome local; ainda pode ser estendido para capturar também foco remoto.
 
-`desktop/tests/browser-core.test.cjs` testa:
-- home alias;
-- domínio -> HTTPS;
-- upgrade HTTP -> HTTPS;
-- HTTPS normal;
-- SafeSearch;
-- bloqueio/normalização de esquemas perigosos;
-- limite de entrada;
-- normalização de títulos;
-- ciclo de abas.
+# Downloads desktop — implementado em v0.4.0
 
-`.github/workflows/pages.yml` agora também executa:
-- `node --check` nos JS do desktop;
-- `node --test desktop/tests/*.test.cjs`.
+## Fluxo
 
-### O que NÃO foi validado ainda
+`session.defaultSession.on('will-download')` no processo principal controla downloads iniciados pelas abas remotas.
+
+Regras:
+- download só é aceito se veio de um `WebContentsView` remoto conhecido do navegador;
+- o processo principal limpa/limita o nome de arquivo antes de usá-lo como sugestão;
+- o navegador **não chama `setSavePath` automaticamente**;
+- usa `DownloadItem.setSaveDialogOptions()` apenas para personalizar o diálogo;
+- o fluxo padrão do Electron continua mostrando o diálogo nativo para o usuário escolher onde salvar;
+- o site remoto não recebe o caminho escolhido;
+- download iniciado sem gesto direto detectado recebe confirmação extra;
+- extensão sensível recebe confirmação extra antes do download continuar.
+
+Extensões atualmente sinalizadas incluem:
+- `.exe`, `.msi`, `.msp`, `.msix`, `.appx`, `.appxbundle`;
+- `.bat`, `.cmd`, `.com`, `.scr`, `.cpl`;
+- `.ps1`, `.psm1`, `.vbs`, `.vbe`, `.js`, `.jse`, `.wsf`, `.wsh`, `.hta`;
+- `.reg`, `.lnk`, `.jar`, `.iso`.
+
+Essa lista é **camada de proteção por extensão, não antivírus**. Não afirmar que detecta malware, conteúdo malicioso dentro de ZIP ou todas as ameaças.
+
+## Painel de downloads local
+
+`chrome.html`/`chrome.js` possuem painel local recolhível.
+
+Mostra:
+- nome do arquivo;
+- host/origem;
+- bytes recebidos e total quando conhecido;
+- percentual/progresso;
+- estado: baixando, pausado, concluído, cancelado ou interrompido;
+- marca visual para arquivo sensível/download automático.
+
+Ações expostas pelo preload estreito:
+- pausar quando o item é resumível;
+- retomar quando suportado pelo servidor;
+- cancelar;
+- mostrar arquivo concluído na pasta;
+- limpar registros concluídos da lista da sessão.
+
+O renderer local **não recebe o caminho completo salvo**; a ação “mostrar na pasta” envia apenas o ID do download ao processo principal, que mantém o caminho.
+
+A lista de downloads desta versão é somente em memória e não sobrevive ao reinício do app.
+
+## Testes desktop
+
+`desktop/tests/browser-core.test.cjs` testa navegação/títulos/ciclo de abas.
+
+`desktop/tests/download-core.test.cjs` testa:
+- classificação de extensões sensíveis;
+- extensões comuns não marcadas;
+- limpeza/limite de nomes de arquivo;
+- parsing de extensão;
+- cálculo de progresso;
+- formatação compacta de bytes.
+
+`.github/workflows/pages.yml` executa:
+- checks JS web;
+- teste do service worker;
+- checks JS desktop incluindo `download-core.js`;
+- `node --test desktop/tests/*.test.cjs`;
+- deploy GitHub Pages.
+
+## O que NÃO foi validado ainda no desktop
 
 Não afirmar que o desktop está pronto para distribuição até teste real em Windows.
 
@@ -203,43 +256,41 @@ Ainda falta teste manual real de:
 - páginas pesadas;
 - crash de renderer;
 - comportamento ao fechar a última aba;
-- login/cookies em sites reais.
+- login/cookies em sites reais;
+- downloads pequenos e grandes;
+- escolha de pasta/nome no diálogo do Windows;
+- cancelamento;
+- pausa/retomada em servidor compatível;
+- aviso de `.exe`/scripts;
+- download automático;
+- mostrar arquivo na pasta.
 
-## Próxima prioridade do navegador desktop
+# Próxima prioridade do navegador desktop
 
-### 1. Downloads seguros
+## 1. Histórico e favoritos desktop
 
-Implementar no processo principal usando `session.on('will-download')` / `DownloadItem`:
-- nunca expor filesystem para remoto;
-- diálogo de salvar controlado pelo sistema;
-- evitar download silencioso quando possível;
-- acompanhar progresso/status;
-- lista de downloads no chrome local;
-- abrir pasta/arquivo apenas por ação explícita do usuário;
-- atenção extra a executáveis/scripts.
+Implementar persistência em `app.getPath('userData')`:
+- processo principal é dono dos dados;
+- chrome local acessa via IPC estreito;
+- páginas remotas não podem consultar histórico/favoritos;
+- histórico com limite e limpeza explícita;
+- favoritos com adicionar/remover;
+- preparar estrutura para futura sincronização opcional sem expor privilégios.
 
-### 2. Histórico e favoritos desktop
-
-- persistir no `app.getPath('userData')`;
-- escrita/leitura somente no processo principal;
-- chrome local consulta via IPC estreito;
-- página remota nunca lê histórico/favoritos;
-- limpeza explícita do histórico.
-
-### 3. Restaurar sessão de abas
+## 2. Restaurar sessão de abas
 
 - persistir URLs abertas + aba ativa;
 - restaurar somente URLs revalidadas por `safeTarget`;
-- limite de abas restauradas;
-- proteção contra loop de crash.
+- limitar abas restauradas;
+- proteger contra loop de crash.
 
-### 4. Permissões por site
+## 3. Permissões por site
 
 - negar por padrão continua sendo a regra;
-- criar prompt/UI explícita para câmera/mic/localização quando necessário;
-- decisão fica no chrome/processo principal, nunca na página remota.
+- UI explícita para câmera/mic/localização quando necessário;
+- decisão fica no chrome/processo principal.
 
-### 5. Windows / distribuição
+## 4. Windows / distribuição
 
 - teste real no Windows;
 - empacotamento;
@@ -247,41 +298,30 @@ Implementar no processo principal usando `session.on('will-download')` / `Downlo
 - atualização segura;
 - assinatura somente com estratégia de custo aprovada.
 
-## Outras frentes pendentes
+# Outras frentes pendentes
 
-### Conta / sincronização
+## Conta / sincronização
 - teste real em dois navegadores/dispositivos;
 - conflitos de notas/projetos;
 - exportação dos dados sincronizados.
 
-### Admin
+## Admin
 - suspensão GLOBAL server-side;
 - reversão com MFA + audit log;
 - melhorar tratamento de erros do painel.
 
-### Editor/workspace
+## Editor/workspace
 - editor real;
 - arquivos/snippets;
 - preview isolado;
 - import/export sem execução automática.
 
-### IA =]
+## IA =]
 - seleção explícita de arquivos/snippets;
 - melhorar qualidade/compatibilidade local;
 - nunca baixar modelo automaticamente.
 
-## PWA / CI / deploy
-
-Workflow do Pages executa:
-- checks JS web;
-- teste do service worker;
-- checks JS desktop;
-- testes unitários do desktop core;
-- deploy GitHub Pages.
-
-Nunca afirmar deploy/CI concluído até o workflow do HEAD final reportar `success`.
-
-## Não fazer
+# Não fazer
 
 - não renomear Happy Coding;
 - não redesenhar sem pedido;
