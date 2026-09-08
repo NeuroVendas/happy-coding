@@ -5,7 +5,6 @@ const AUTH_KEY='happyCoding.community.auth.v1';
 const API='https://vzfnoaixjgyifutklpwn.supabase.co/rest/v1/';
 const KEY='sb_publishable_nQTrMmVzLt0b1t0y-Ob22g_UwF1eNDD';
 function storedSession(){try{let raw=localStorage.getItem(AUTH_KEY);if(!raw){raw=sessionStorage.getItem(AUTH_KEY);if(raw)localStorage.setItem(AUTH_KEY,raw);}const parsed=JSON.parse(raw);const s=parsed?.currentSession||parsed?.session||parsed;return s?.access_token&&s?.user?.id?s:null;}catch{return null;}}
-function aal(token){try{const p=token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');return JSON.parse(atob(p.padEnd(p.length+(4-p.length%4)%4,'='))).aal||'aal1';}catch{return'aal1';}}
 
 function addAccountEntryPoints(){
   const menu=q('menuPanel');
@@ -18,7 +17,7 @@ function addAccountEntryPoints(){
   if(profile&&!profile.dataset.accountCenter){profile.dataset.accountCenter='1';profile.title='Abrir Conta';profile.addEventListener('click',event=>{event.preventDefault();event.stopImmediatePropagation();location.href='account.html';},true);}
 }
 async function addAdminEntry(){
-  const s=storedSession(),menu=q('menuPanel');if(!s||aal(s.access_token)!=='aal2'||!menu||q('adminCenterLink'))return;
+  const s=storedSession(),menu=q('menuPanel');if(!s||!menu||q('adminCenterLink'))return;
   try{const r=await fetch(`${API}hc_admin_members?select=user_id&user_id=eq.${encodeURIComponent(s.user.id)}`,{headers:{apikey:KEY,Authorization:`Bearer ${s.access_token}`,Accept:'application/json'}});if(!r.ok)return;const rows=await r.json();if(rows.length!==1)return;const a=document.createElement('a');a.id='adminCenterLink';a.href='admin.html';a.textContent='🛡 Painel Admin';menu.append(a);}catch{}
 }
 addAccountEntryPoints();addAdminEntry();
