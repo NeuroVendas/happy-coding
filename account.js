@@ -34,9 +34,12 @@ async function loadProfile(){
 }
 async function refreshAdminLink(){
   q('adminLink').classList.add('hidden');
-  if(!session||decodeAal(session.access_token)!=='aal2')return;
+  if(!session)return;
   const {data,error}=await db.from('hc_admin_members').select('user_id').eq('user_id',session.user.id).maybeSingle();
-  if(!error&&data)q('adminLink').classList.remove('hidden');
+  if(!error&&data){
+    q('adminLink').classList.remove('hidden');
+    q('adminLink').textContent=decodeAal(session.access_token)==='aal2'?'Painel Admin':'Painel Admin · verificar MFA';
+  }
 }
 async function refreshMfa(){
   if(!session)return;
