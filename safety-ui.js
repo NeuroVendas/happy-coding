@@ -111,3 +111,74 @@ function addSafetyLinks(){
   }
 }
 addSafetyLinks();
+
+// Safe web search: keep search results inside Happy Coding instead of navigating to google.com.
+const HC_WEB_SEARCH_URL=`${HC_SUPABASE_URL}/functions/v1/web-search`;
+const HC_HISTORY_KEY='happyCoding.history.v1';
+let hcSearchVersion=0;
+
+function hcLooksLikeAddress(value){
+  const v=String(value||'').trim();
+  if(!v||v==='happy://home')return true;
+  if(/^[a-z][a-z0-9+.-]*:/i.test(v))return true;
+  return /^([a-z0-9-]+\.)+[a-z]{2,}(?::\d{1,5})?(\/.*)?$/i.test(v);
+}
+function hcAdultSearch(value){
+  const t=String(value||'').toLowerCase();
+  return ['porn','porno','pornografia','hentai','xvideos','xnxx','onlyfans nude','nudes','sexo explícito','sex videos','rule34','nhentai'].some(term=>t.includes(term));
+}
+function hcInjectSearchStyle(){
+  if(q('hcSearchStyle'))return;
+  const style=document.createElement('style');style.id='hcSearchStyle';style.textContent=`
+    .hc-search-view{max-width:980px;margin:0 auto;padding:28px 8px 70px}.hc-search-head{display:flex;gap:16px;align-items:flex-end;justify-content:space-between;margin-bottom:20px}.hc-search-head h1{margin:5px 0 0;font-size:clamp(1.7rem,4vw,2.5rem)}.hc-search-provider{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;opacity:.7}.hc-search-status{min-height:24px;margin:8px 0 18px;opacity:.82}.hc-search-list{display:grid;gap:12px}.hc-search-card{width:100%;text-align:left;background:var(--panel,#111722);border:1px solid rgba(255,255,255,.09);border-radius:14px;padding:17px 18px;color:inherit;cursor:pointer}.hc-search-card:hover,.hc-search-card:focus-visible{border-color:#b7f34a;transform:translateY(-1px)}.hc-search-card strong{display:block;font-size:1.03rem;margin:5px 0 7px;color:#dfffa7}.hc-search-host{display:block;font-size:.76rem;opacity:.66;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hc-search-card p{margin:0;line-height:1.45;opacity:.84}.hc-search-empty{padding:24px;border:1px dashed rgba(255,255,255,.14);border-radius:14px;opacity:.78}.hc-search-retry{margin-top:12px}@media(max-width:700px){.hc-search-view{padding:20px 2px 70px}.hc-search-head{align-items:flex-start;flex-direction:column}.hc-search-card{padding:15px}}
+  `;document.head.append(style);
+}
+function hcEnsureSearchView(){
+  let section=q('hcSearchView');if(section)return section;
+  hcInjectSearchStyle();section=el('section','view hc-search-view');section.id='hcSearchView';section.dataset.viewPanel='search';
+  const head=el('div','hc-search-head');const titleBox=el('div');titleBox.append(el('span','section-kicker','BUSCA SEGURA'),el('h1','','Resultados da pesquisa'));
+  head.append(titleBox,el('span','hc-search-provider','Google · SafeSearch ativo'));
+  const status=el('p','hc-search-status');status.id='hcSearchStatus';status.setAttribute('role','status');status.setAttribute('aria-live','polite');
+  const list=el('div','hc-search-list');list.id='hcSearchList';section.append(head,status,list);q('mainView')?.append(section);return section;
+}
+function hcShowSearchView(query){
+  const section=hcEnsureSearchView();document.querySelectorAll('[data-view-panel]').forEach(view=>view.classList.remove('active'));section.classList.add('active');document.querySelectorAll('[data-view]').forEach(link=>link.classList.remove('active'));const input=q('addressInput');if(input)input.value=query;window.scrollTo({top:0,behavior:'smooth'});
+}
+function hcRememberResult(url,title){
+  try{const current=JSON.parse(localStorage.getItem(HC_HISTORY_KEY)||'[]');current.unshift({url,title:title||url,at:new Date().toISOString()});localStorage.setItem(HC_HISTORY_KEY,JSON.stringify(current.slice(0,100)));}catch{}
+}
+function hcOpenResult(result){
+  try{const url=new URL(result.url);if(!['http:','https:'].includes(url.protocol))return;hcRememberResult(url.href,result.title);window.open(url.href,'_blank','noopener');}catch{}
+}
+function hcRenderSearchResults(payload){
+  const list=q('hcSearchList');if(!list)return;list.replaceChildren();
+  const results=Array.isArray(payload?.results)?payload.results:[];
+  if(!results.length){list.append(el('div','hc-search-empty','Nenhum resultado disponível.'));return;}
+  for(const item of results){
+    let host='';try{host=new URL(item.url).hostname;}catch{continue;}
+    const card=el('button','hc-search-card');card.type='button';card.append(el('span','hc-search-host',host),el('strong','',String(item.title||host).slice(0,180)));
+    if(item.snippet)card.append(el('p','',String(item.snippet).slice(0,420)));card.addEventListener('click',()=>hcOpenResult(item));list.append(card);
+  }
+}
+async function hcRunSearch(raw){
+  const query=String(raw||'').replace(/[\u0000-\u001f\u007f]/g,' ').replace(/\s+/g,' ').trim().slice(0,240);if(!query)return;
+  if(hcAdultSearch(query)){q('blockedModal')?.classList.remove('hidden');return;}
+  const version=++hcSearchVersion;hcShowSearchView(query);const status=q('hcSearchStatus'),list=q('hcSearchList');if(status)status.textContent=`Buscando “${query}”…`;list?.replaceChildren(el('div','hc-search-empty','Consultando o Google com SafeSearch ativo…'));
+  try{
+    const response=await fetch(HC_WEB_SEARCH_URL,{method:'POST',headers:{'Content-Type':'application/json','apikey':HC_PUBLIC_KEY},body:JSON.stringify({q:query})});
+    const payload=await response.json().catch(()=>({}));if(version!==hcSearchVersion)return;
+    if(!response.ok)throw new Error(payload?.message||`Falha na busca (${response.status})`);
+    if(status)status.textContent=`${payload.results?.length||0} resultado(s) · Google · SafeSearch ativo`;hcRenderSearchResults(payload);
+  }catch(error){
+    if(version!==hcSearchVersion)return;if(status)status.textContent=error?.message||'Não foi possível pesquisar agora.';if(list){list.replaceChildren();const box=el('div','hc-search-empty','A busca interna falhou. O Happy Coding não vai redirecionar você automaticamente para o Google.');box.append(btn('Tentar novamente',()=>hcRunSearch(query),'secondary-btn hc-search-retry'));list.append(box);}
+  }
+}
+function hcInterceptSearchForm(form,input,alwaysSearch=false){
+  if(!form||!input)return;form.addEventListener('submit',event=>{
+    const value=input.value.trim();if(!value)return;
+    if(!alwaysSearch&&hcLooksLikeAddress(value))return;
+    event.preventDefault();event.stopImmediatePropagation();hcRunSearch(value);
+  },true);
+}
+hcInterceptSearchForm(q('addressForm'),q('addressInput'),false);hcInterceptSearchForm(q('universalSearch'),q('searchInput'),true);
+document.addEventListener('happy:view',event=>{if(event.detail!=='search')q('hcSearchView')?.classList.remove('active');});
