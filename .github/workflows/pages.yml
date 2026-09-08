@@ -41,6 +41,7 @@ jobs:
           node --check desktop/browser-core.js
           node --check desktop/download-core.js
           node --check desktop/library-core.js
+          node --check desktop/session-core.js
       - name: Check offline behavior
         run: node --test tests/sw.test.cjs
       - name: Check desktop browser core
