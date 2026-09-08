@@ -23,6 +23,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Check JavaScript syntax
+        run: |
+          node --check app.js
+          node --check community.js
+          node --check safety-ui.js
+          node --check account-sync.js
+          node --check sync-hook.js
+          node --check ai-local.js
       - name: Check offline behavior
         run: node --test tests/sw.test.cjs
       - name: Setup Pages
