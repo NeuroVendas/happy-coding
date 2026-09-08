@@ -6,7 +6,7 @@ const vm = require('node:vm');
 
 const scope = 'https://neurovendas.github.io/happy-coding/';
 const prefix = `happy-coding:${scope}:`;
-const current = `${prefix}v8`;
+const current = `${prefix}v9`;
 const source = readFileSync(resolve(__dirname, '../sw.js'), 'utf8');
 
 function worker() {
