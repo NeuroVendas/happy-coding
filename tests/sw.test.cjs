@@ -6,7 +6,7 @@ const vm = require('node:vm');
 
 const scope = 'https://neurovendas.github.io/happy-coding/';
 const prefix = `happy-coding:${scope}:`;
-const current = `${prefix}v4`;
+const current = `${prefix}v5`;
 const source = readFileSync(resolve(__dirname, '../sw.js'), 'utf8');
 
 function worker() {
@@ -60,12 +60,12 @@ function worker() {
   };
 }
 
-test('install caches existing shell files, including AI and account sync modules', async () => {
+test('install caches existing shell files including account entry modules', async () => {
   const w = worker();
   await w.lifecycle('install');
-  assert.ok(w.stores.get(current).has(`${scope}ai-local.js`));
-  assert.ok(w.stores.get(current).has(`${scope}account-sync.js`));
-  assert.ok(w.stores.get(current).has(`${scope}sync-hook.js`));
+  for (const file of ['ai-local.js','account-sync.js','account-entry.js','public-feed.js','sync-hook.js']) {
+    assert.ok(w.stores.get(current).has(`${scope}${file}`), file);
+  }
   assert.equal(w.state.skipped, true);
 });
 
