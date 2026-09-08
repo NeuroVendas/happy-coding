@@ -6,12 +6,13 @@ const {randomUUID}=require('node:crypto');
 const {HOME,safeTarget,cleanTitle,nextTabId}=require('./browser-core');
 const {cleanFilename,isRiskyDownload,safePercent}=require('./download-core');
 const {cleanUrl,cleanLibraryTitle,normalizeLibrary,addHistory,toggleBookmark}=require('./library-core');
+const {normalizeSession,buildSessionSnapshot}=require('./session-core');
 
 const CHROME_COLLAPSED=104;
 const CHROME_EXPANDED=360;
 const MAX_TABS=20;
 const MAX_DOWNLOADS=100;
-let win,chromeView,activeTabId=null,tabCounter=0,chromeHeight=CHROME_COLLAPSED,downloadCounter=0,libraryPath='';
+let win,chromeView,activeTabId=null,tabCounter=0,chromeHeight=CHROME_COLLAPSED,downloadCounter=0,libraryPath='',sessionPath='',restoringSession=false;
 let library={bookmarks:[],history:[]};
 const tabs=new Map();
 const closedTabs=[];
@@ -23,46 +24,14 @@ function tabForWebContents(webContents){for(const tab of tabs.values())if(tab.vi
 function tabState(tab){
   const wc=tab.view.webContents;
   const nav=wc.navigationHistory;
-  return{
-    id:tab.id,
-    title:cleanTitle(tab.title,tab.url===HOME?'Happy Coding =]':'Nova aba'),
-    url:wc.getURL()||tab.url||HOME,
-    loading:!!tab.loading,
-    error:tab.error||'',
-    canGoBack:nav.canGoBack(),
-    canGoForward:nav.canGoForward()
-  };
+  return{id:tab.id,title:cleanTitle(tab.title,tab.url===HOME?'Happy Coding =]':'Nova aba'),url:wc.getURL()||tab.url||HOME,loading:!!tab.loading,error:tab.error||'',canGoBack:nav.canGoBack(),canGoForward:nav.canGoForward()};
 }
 function downloadState(record){
-  return{
-    id:record.id,
-    filename:record.filename,
-    url:record.url,
-    mime:record.mime,
-    state:record.state,
-    received:record.received,
-    total:record.total,
-    percent:safePercent(record.received,record.total),
-    paused:!!record.paused,
-    canResume:!!record.canResume,
-    risky:!!record.risky,
-    automatic:!!record.automatic,
-    completedAt:record.completedAt||null,
-    saved:!!record.savePath
-  };
+  return{id:record.id,filename:record.filename,url:record.url,mime:record.mime,state:record.state,received:record.received,total:record.total,percent:safePercent(record.received,record.total),paused:!!record.paused,canResume:!!record.canResume,risky:!!record.risky,automatic:!!record.automatic,completedAt:record.completedAt||null,saved:!!record.savePath};
 }
-function sendState(){
-  if(!chromeView||chromeView.webContents.isDestroyed())return;
-  chromeView.webContents.send('hc:browser-state',{activeTabId,tabs:[...tabs.values()].map(tabState)});
-}
-function sendDownloads(){
-  if(!chromeView||chromeView.webContents.isDestroyed())return;
-  chromeView.webContents.send('hc:downloads-state',[...downloads.values()].slice(-MAX_DOWNLOADS).reverse().map(downloadState));
-}
-function sendLibrary(){
-  if(!chromeView||chromeView.webContents.isDestroyed())return;
-  chromeView.webContents.send('hc:library-state',{bookmarks:library.bookmarks,history:library.history});
-}
+function sendState(){if(chromeView&&!chromeView.webContents.isDestroyed())chromeView.webContents.send('hc:browser-state',{activeTabId,tabs:[...tabs.values()].map(tabState)});}
+function sendDownloads(){if(chromeView&&!chromeView.webContents.isDestroyed())chromeView.webContents.send('hc:downloads-state',[...downloads.values()].slice(-MAX_DOWNLOADS).reverse().map(downloadState));}
+function sendLibrary(){if(chromeView&&!chromeView.webContents.isDestroyed())chromeView.webContents.send('hc:library-state',{bookmarks:library.bookmarks,history:library.history});}
 function notice(message){if(chromeView&&!chromeView.webContents.isDestroyed())chromeView.webContents.send('hc:notice',String(message||'').slice(0,200));}
 function resize(){
   if(!win)return;
@@ -75,50 +44,57 @@ function setPanelOpen(open){chromeHeight=open?CHROME_EXPANDED:CHROME_COLLAPSED;r
 function loadLibrary(){
   libraryPath=path.join(app.getPath('userData'),'browser-library.json');
   try{library=normalizeLibrary(JSON.parse(fs.readFileSync(libraryPath,'utf8')));}
-  catch(error){
-    library={bookmarks:[],history:[]};
-    if(error?.code!=='ENOENT'){
-      try{fs.renameSync(libraryPath,`${libraryPath}.corrupt-${Date.now()}`);}catch{}
-    }
-  }
+  catch(error){library={bookmarks:[],history:[]};if(error?.code!=='ENOENT'){try{fs.renameSync(libraryPath,`${libraryPath}.corrupt-${Date.now()}`);}catch{}}}
 }
 function saveLibrary(){
   if(!libraryPath)return false;
   try{fs.mkdirSync(path.dirname(libraryPath),{recursive:true});fs.writeFileSync(libraryPath,JSON.stringify({version:1,bookmarks:library.bookmarks,history:library.history},null,2),{encoding:'utf8',mode:0o600});return true;}catch{notice('Não foi possível salvar histórico/favoritos.');return false;}
 }
-function recordHistory(tab,url){
-  const safe=cleanUrl(url);if(!safe)return;
-  library.history=addHistory(library.history,{id:`h-${randomUUID()}`,url:safe,title:cleanLibraryTitle(tab.title,safe),visitedAt:Date.now()});
-  saveLibrary();sendLibrary();
-}
-function updateHistoryTitle(url,title){
-  const safe=cleanUrl(url);if(!safe)return;
-  const item=library.history.find(entry=>entry.url===safe);if(!item)return;
-  const clean=cleanLibraryTitle(title,item.title);if(item.title===clean)return;
-  item.title=clean;saveLibrary();sendLibrary();
-}
+function recordHistory(tab,url){const safe=cleanUrl(url);if(!safe)return;library.history=addHistory(library.history,{id:`h-${randomUUID()}`,url:safe,title:cleanLibraryTitle(tab.title,safe),visitedAt:Date.now()});saveLibrary();sendLibrary();}
+function updateHistoryTitle(url,title){const safe=cleanUrl(url);if(!safe)return;const item=library.history.find(entry=>entry.url===safe);if(!item)return;const clean=cleanLibraryTitle(title,item.title);if(item.title===clean)return;item.title=clean;saveLibrary();sendLibrary();}
 function toggleCurrentBookmark(){
   const tab=currentTab();if(!tab)return false;
   const url=cleanUrl(tab.view.webContents.getURL()||tab.url);if(!url)return false;
   const result=toggleBookmark(library.bookmarks,{id:`b-${randomUUID()}`,url,title:cleanLibraryTitle(tab.title,url),createdAt:Date.now()});
   library.bookmarks=result.bookmarks;saveLibrary();sendLibrary();notice(result.added?'Adicionado aos favoritos.':'Removido dos favoritos.');return result.added;
 }
-function removeBookmark(id){
-  const before=library.bookmarks.length;library.bookmarks=library.bookmarks.filter(item=>item.id!==String(id));if(library.bookmarks.length===before)return false;saveLibrary();sendLibrary();return true;
-}
+function removeBookmark(id){const before=library.bookmarks.length;library.bookmarks=library.bookmarks.filter(item=>item.id!==String(id));if(library.bookmarks.length===before)return false;saveLibrary();sendLibrary();return true;}
 function clearHistory(){library.history=[];saveLibrary();sendLibrary();notice('Histórico limpo.');return true;}
+
+function writeSession(snapshot){
+  if(!sessionPath)return false;
+  try{fs.mkdirSync(path.dirname(sessionPath),{recursive:true});fs.writeFileSync(sessionPath,JSON.stringify(snapshot,null,2),{encoding:'utf8',mode:0o600});return true;}catch{notice('Não foi possível salvar a sessão de abas.');return false;}
+}
+function loadSessionPlan(){
+  sessionPath=path.join(app.getPath('userData'),'browser-session.json');
+  try{return normalizeSession(JSON.parse(fs.readFileSync(sessionPath,'utf8')));}
+  catch(error){if(error?.code!=='ENOENT'){try{fs.renameSync(sessionPath,`${sessionPath}.corrupt-${Date.now()}`);}catch{}}return{restore:false,urls:[],activeIndex:0};}
+}
+function sessionEntries(){
+  const entries=[];
+  for(const tab of tabs.values()){
+    const url=cleanUrl(tab.view.webContents.getURL()||tab.url);
+    if(url)entries.push({id:tab.id,url});
+  }
+  return entries;
+}
+function saveSession(cleanExit=false){
+  if(restoringSession||!sessionPath)return false;
+  const entries=sessionEntries();
+  const index=Math.max(0,entries.findIndex(entry=>entry.id===activeTabId));
+  return writeSession(buildSessionSnapshot(entries.map(entry=>entry.url),index,cleanExit));
+}
+function markSessionRunning(plan){return writeSession(buildSessionSnapshot(plan.urls,plan.activeIndex,false));}
 
 function activateTab(id){
   const tab=tabs.get(id);if(!tab)return false;
   activeTabId=id;
   for(const item of tabs.values())item.view.setVisible(item.id===id);
-  tab.view.webContents.focus();
-  sendState();sendLibrary();return true;
+  tab.view.webContents.focus();sendState();sendLibrary();if(!restoringSession)saveSession(false);return true;
 }
 function handleShortcut(tab,event,input){
   if(input.type!=='keyDown')return;
-  const key=String(input.key||'').toLowerCase();
-  const mod=process.platform==='darwin'?input.meta:input.control;
+  const key=String(input.key||'').toLowerCase();const mod=process.platform==='darwin'?input.meta:input.control;
   if(mod&&input.shift&&key==='t'){event.preventDefault();restoreClosedTab();return;}
   if(mod&&key==='l'){event.preventDefault();chromeView.webContents.send('hc:focus-address');return;}
   if(mod&&key==='t'){event.preventDefault();createTab(HOME,true);return;}
@@ -132,43 +108,31 @@ function handleShortcut(tab,event,input){
 function configureRemote(tab){
   const wc=tab.view.webContents;
   wc.setWindowOpenHandler(({url})=>{createTab(url,true);return{action:'deny'};});
-  wc.on('will-navigate',(event,url)=>{
-    const target=safeTarget(url);
-    if(target!==url){event.preventDefault();wc.loadURL(target).catch(()=>{});}
-  });
+  wc.on('will-navigate',(event,url)=>{const target=safeTarget(url);if(target!==url){event.preventDefault();wc.loadURL(target).catch(()=>{});}});
   wc.on('before-input-event',(event,input)=>handleShortcut(tab,event,input));
   wc.on('did-start-loading',()=>{tab.loading=true;tab.error='';sendState();});
   wc.on('did-stop-loading',()=>{tab.loading=false;tab.url=wc.getURL()||tab.url;sendState();});
-  wc.on('did-navigate',(_event,url)=>{tab.url=url;tab.error='';recordHistory(tab,url);sendState();});
-  wc.on('did-navigate-in-page',(_event,url)=>{tab.url=url;recordHistory(tab,url);sendState();});
+  wc.on('did-navigate',(_event,url)=>{tab.url=url;tab.error='';recordHistory(tab,url);sendState();if(!restoringSession)saveSession(false);});
+  wc.on('did-navigate-in-page',(_event,url)=>{tab.url=url;recordHistory(tab,url);sendState();if(!restoringSession)saveSession(false);});
   wc.on('page-title-updated',(_event,title)=>{tab.title=cleanTitle(title,tab.title);updateHistoryTitle(wc.getURL()||tab.url,tab.title);sendState();});
-  wc.on('did-fail-load',(_event,errorCode,errorDescription,validatedURL,isMainFrame)=>{
-    if(!isMainFrame||errorCode===-3)return;
-    tab.loading=false;tab.error=cleanTitle(errorDescription,'Falha ao carregar');tab.url=validatedURL||tab.url;sendState();
-  });
+  wc.on('did-fail-load',(_event,errorCode,errorDescription,validatedURL,isMainFrame)=>{if(!isMainFrame||errorCode===-3)return;tab.loading=false;tab.error=cleanTitle(errorDescription,'Falha ao carregar');tab.url=validatedURL||tab.url;sendState();});
   wc.on('render-process-gone',(_event,details)=>{tab.loading=false;tab.error=`Página interrompida (${details.reason})`;sendState();});
 }
 function createTab(raw=HOME,activate=true){
   if(tabs.size>=MAX_TABS){notice(`Limite de ${MAX_TABS} abas nesta versão.`);return null;}
-  const id=`tab-${++tabCounter}`;
-  const target=safeTarget(raw);
+  const id=`tab-${++tabCounter}`,target=safeTarget(raw);
   const view=new WebContentsView({webPreferences:{nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true,allowRunningInsecureContent:false,spellcheck:true}});
   const tab={id,view,url:target,title:target===HOME?'Happy Coding =]':'Nova aba',loading:true,error:''};
-  tabs.set(id,tab);configureRemote(tab);
-  win.contentView.addChildView(view);view.setVisible(false);resize();
-  wcLoad(tab,target);
-  if(activate)activateTab(id);else sendState();
-  return id;
+  tabs.set(id,tab);configureRemote(tab);win.contentView.addChildView(view);view.setVisible(false);resize();wcLoad(tab,target);
+  if(activate)activateTab(id);else{sendState();if(!restoringSession)saveSession(false);}return id;
 }
 function wcLoad(tab,target){tab.url=target;tab.loading=true;tab.error='';tab.view.webContents.loadURL(target).catch(error=>{tab.loading=false;tab.error=cleanTitle(error?.message,'Falha ao carregar');sendState();});}
 function closeTab(id){
   const tab=tabs.get(id);if(!tab)return false;
-  const ids=[...tabs.keys()];const index=ids.indexOf(id);
-  if(tab.url)closedTabs.unshift(tab.url);if(closedTabs.length>10)closedTabs.length=10;
+  const ids=[...tabs.keys()],index=ids.indexOf(id);if(tab.url)closedTabs.unshift(tab.url);if(closedTabs.length>10)closedTabs.length=10;
   win.contentView.removeChildView(tab.view);tabs.delete(id);tab.view.webContents.close();
   if(!tabs.size){win.close();return true;}
-  if(activeTabId===id){const remaining=[...tabs.keys()];activateTab(remaining[Math.min(index,remaining.length-1)]);}else{sendState();sendLibrary();}
-  return true;
+  if(activeTabId===id){const remaining=[...tabs.keys()];activateTab(remaining[Math.min(index,remaining.length-1)]);}else{sendState();sendLibrary();if(!restoringSession)saveSession(false);}return true;
 }
 function restoreClosedTab(){const url=closedTabs.shift();if(url)createTab(url,true);}
 function cycleTabs(direction){const id=nextTabId([...tabs.keys()],activeTabId,direction);if(id)activateTab(id);}
@@ -178,27 +142,19 @@ function goForward(){const tab=currentTab();if(!tab)return false;const nav=tab.v
 function reloadActive(){const tab=currentTab();if(!tab)return false;tab.view.webContents.reload();return true;}
 
 function confirmDownload(filename,risky,automatic){
-  if(!risky&&!automatic)return true;
-  const reasons=[];
+  if(!risky&&!automatic)return true;const reasons=[];
   if(risky)reasons.push('Este tipo de arquivo pode executar código ou alterar o computador.');
   if(automatic)reasons.push('O site iniciou este download sem um clique direto detectado.');
-  const choice=dialog.showMessageBoxSync(win,{type:'warning',title:'Confirmar download',message:`Baixar “${filename}”?`,detail:`${reasons.join(' ')} Só continue se você confia no site e esperava este arquivo.`,buttons:['Cancelar','Continuar e escolher onde salvar'],defaultId:0,cancelId:0,noLink:true});
-  return choice===1;
+  return dialog.showMessageBoxSync(win,{type:'warning',title:'Confirmar download',message:`Baixar “${filename}”?`,detail:`${reasons.join(' ')} Só continue se você confia no site e esperava este arquivo.`,buttons:['Cancelar','Continuar e escolher onde salvar'],defaultId:0,cancelId:0,noLink:true})===1;
 }
 function registerDownload(event,item,webContents){
-  const tab=tabForWebContents(webContents);
-  if(!tab){event.preventDefault();return;}
-  const filename=cleanFilename(item.getFilename());
-  const risky=isRiskyDownload(filename);
-  const automatic=!item.hasUserGesture();
+  const tab=tabForWebContents(webContents);if(!tab){event.preventDefault();return;}
+  const filename=cleanFilename(item.getFilename()),risky=isRiskyDownload(filename),automatic=!item.hasUserGesture();
   if(!confirmDownload(filename,risky,automatic)){event.preventDefault();notice('Download cancelado antes de iniciar.');return;}
-
   item.setSaveDialogOptions({title:'Salvar download — Happy Coding',buttonLabel:'Salvar',defaultPath:path.join(app.getPath('downloads'),filename)});
   const record={id:`download-${++downloadCounter}`,item,filename,url:String(item.getURL()||'').slice(0,4096),mime:String(item.getMimeType()||'').slice(0,120),state:'progressing',received:item.getReceivedBytes(),total:item.getTotalBytes(),paused:item.isPaused(),canResume:item.canResume(),risky,automatic,savePath:'',completedAt:null};
   downloads.set(record.id,record);
-  while(downloads.size>MAX_DOWNLOADS){let removed=false;for(const [id,old] of downloads){if(old.state!=='progressing'){downloads.delete(id);removed=true;break;}}if(!removed)break;}
-  sendDownloads();
-
+  while(downloads.size>MAX_DOWNLOADS){let removed=false;for(const [id,old] of downloads){if(old.state!=='progressing'){downloads.delete(id);removed=true;break;}}if(!removed)break;}sendDownloads();
   item.on('updated',(_event,state)=>{record.state=state;record.received=item.getReceivedBytes();record.total=item.getTotalBytes();record.paused=item.isPaused();record.canResume=item.canResume();sendDownloads();});
   item.once('done',(_event,state)=>{record.state=state;record.received=item.getReceivedBytes();record.total=item.getTotalBytes();record.paused=false;record.canResume=false;record.savePath=state==='completed'?String(item.getSavePath()||''):'';record.completedAt=Date.now();record.item=null;sendDownloads();if(state==='completed')notice(`${record.filename} baixado com sucesso.`);else if(state==='cancelled')notice(`${record.filename} cancelado.`);else notice(`${record.filename} foi interrompido.`);});
 }
@@ -211,18 +167,19 @@ function clearFinishedDownloads(){for(const [id,record] of downloads)if(record.s
 
 app.enableSandbox();
 app.whenReady().then(()=>{
-  loadLibrary();
-  session.defaultSession.setPermissionRequestHandler((_wc,_permission,callback)=>callback(false));
-  session.defaultSession.setPermissionCheckHandler(()=>false);
-  session.defaultSession.on('will-download',registerDownload);
+  loadLibrary();const plan=loadSessionPlan();markSessionRunning(plan);
+  session.defaultSession.setPermissionRequestHandler((_wc,_permission,callback)=>callback(false));session.defaultSession.setPermissionCheckHandler(()=>false);session.defaultSession.on('will-download',registerDownload);
   win=new BaseWindow({width:1280,height:820,minWidth:760,minHeight:520,title:'Happy Coding =]'});
   chromeView=new WebContentsView({webPreferences:{preload:path.join(__dirname,'preload.js'),nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true}});
-  win.contentView.addChildView(chromeView);
-  chromeView.webContents.loadFile(path.join(__dirname,'chrome.html'));
-  chromeView.webContents.on('did-finish-load',()=>{sendState();sendDownloads();sendLibrary();});
-  createTab(HOME,true);resize();win.on('resize',resize);
-  win.on('closed',()=>{for(const tab of tabs.values())if(!tab.view.webContents.isDestroyed())tab.view.webContents.close();tabs.clear();if(!chromeView?.webContents.isDestroyed())chromeView?.webContents.close();win=null;chromeView=null;activeTabId=null;});
+  win.contentView.addChildView(chromeView);chromeView.webContents.loadFile(path.join(__dirname,'chrome.html'));chromeView.webContents.on('did-finish-load',()=>{sendState();sendDownloads();sendLibrary();});
+  restoringSession=true;
+  if(plan.restore){for(const url of plan.urls)createTab(url,false);const ids=[...tabs.keys()];activateTab(ids[Math.min(plan.activeIndex,ids.length-1)]||ids[0]);}
+  else createTab(HOME,true);
+  restoringSession=false;saveSession(false);resize();win.on('resize',resize);
+  win.on('close',()=>{restoringSession=false;saveSession(true);});
+  win.on('closed',()=>{for(const tab of tabs.values())if(!tab.view.webContents.isDestroyed())tab.view.webContents.close();tabs.clear();if(!chromeView?.webContents.isDestroyed())chromeView.webContents.close();win=null;chromeView=null;activeTabId=null;});
 });
+app.on('before-quit',()=>{if(win)saveSession(true);});
 app.on('window-all-closed',()=>{if(process.platform!=='darwin')app.quit();});
 
 ipcMain.handle('hc:navigate',(event,value)=>isChromeSender(event.sender)&&navigate(value));
