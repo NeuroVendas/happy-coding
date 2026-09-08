@@ -21,16 +21,19 @@ Atualizado em 2026-09-08 com estado verificado no GitHub e no Supabase.
 - [x] Edge Function autenticada para exclusão da própria conta.
 - [x] Conta principal em `account.html`, independente da Comunidade.
 - [x] Existe 1 conta real confirmada.
-- [x] Existe 1 fator MFA verificado.
+- [x] A conta `tr.negocios.2022@gmail.com` foi verificada no banco como confirmada, com 1 MFA verificado e membership admin ativa.
 - [x] Existe 1 administrador real em `hc_admin_members`.
 - [x] Bootstrap inicial encerrado permanentemente na Edge Function `bootstrap-admin` v2.
 - [x] Admin suite aplicada: diretório, timeout/ban da comunidade, anúncios, eventos e audit log.
 - [x] Testes transacionais de autorização da admin suite passaram e foram revertidos.
 - [x] Migração de notas aplicada em `hc_projects`.
 - [x] RLS das notas testada com usuário dono e outro usuário.
-- [x] Sincronização opt-in agora inclui perfil, favoritos, projetos e notas.
+- [x] Sincronização opt-in inclui perfil, favoritos, projetos e notas.
+- [x] Sessão de autenticação passou de `sessionStorage` para persistência no navegador via `localStorage`, com migração automática da sessão legada.
+- [x] Conta, Comunidade, Admin e o atalho de Admin usam/interpretam a mesma sessão persistente.
+- [x] Eventos de login/logout no storage foram reforçados, inclusive `removeItem`.
 - [x] Base do navegador desktop criada em `/desktop` usando isolamento de conteúdo remoto.
-- [x] Service worker usa cache `v7` após a atualização da sincronização.
+- [x] Service worker usa cache `v8` após a correção de persistência da autenticação.
 
 ## Segurança — estado atual
 
@@ -39,10 +42,12 @@ Atualizado em 2026-09-08 com estado verificado no GitHub e no Supabase.
 - [x] Usuário sancionado não consegue publicar nem denunciar durante a sanção.
 - [x] Admin não consegue sancionar a própria conta pelo modelo atual.
 - [x] Audit log não possui política de update/delete para clientes autenticados.
+- [x] Persistência do login não altera as regras de autorização: acesso Admin continua dependendo de `hc_admin_members` + AAL2.
 - [ ] Security Advisor ainda mostra 1 aviso: **Leaked Password Protection Disabled**.
 
 ## Precisa de teste real adicional
 
+- [ ] Entrar como `tr.negocios.2022@gmail.com`, verificar MFA, fechar totalmente o Happy Coding, abrir novamente e confirmar que a sessão continua conectada e que o botão Painel Admin reaparece.
 - [ ] Sincronização em dois navegadores/dispositivos com a conta real.
 - [ ] Alterar notas em um dispositivo e confirmar recuperação no outro.
 - [ ] Validar conflito quando os dois dispositivos editam o mesmo projeto/nota.
