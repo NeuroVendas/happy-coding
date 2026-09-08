@@ -1,6 +1,6 @@
 # Happy Coding =] — Checklist de lançamento
 
-Atualizado em 2026-09-08.
+Atualizado em 2026-09-08 com estado verificado no GitHub e no Supabase.
 
 ## Pronto / implementado
 
@@ -15,42 +15,57 @@ Atualizado em 2026-09-08.
 - [x] Comunidade beta no Supabase com RLS.
 - [x] Posts entram como `pending` e não publicam automaticamente.
 - [x] Moderação de posts exige membro de `hc_admin_members` + MFA/AAL2.
-- [x] Limite de 5 posts por hora por usuário.
-- [x] Denúncias de posts no banco com RLS.
-- [x] Limite de 10 denúncias por hora por usuário.
-- [x] Fila de denúncias preparada para moderadores com MFA.
-- [x] Página de privacidade.
-- [x] Regras da comunidade.
+- [x] Limite de posts e denúncias aplicado no backend da comunidade.
+- [x] Denúncias com fila de moderação.
+- [x] Página de privacidade e regras da comunidade.
 - [x] Edge Function autenticada para exclusão da própria conta.
-- [x] Bootstrap de primeiro admin protegido por código único + MFA + fechamento automático após primeiro admin.
-- [x] Security Advisor do Supabase sem alertas após as mudanças.
-- [x] Base do navegador desktop criada em `/desktop` usando WebContentsView e isolamento de conteúdo remoto.
+- [x] Conta principal em `account.html`, independente da Comunidade.
+- [x] Existe 1 conta real confirmada.
+- [x] Existe 1 fator MFA verificado.
+- [x] Existe 1 administrador real em `hc_admin_members`.
+- [x] Bootstrap inicial encerrado permanentemente na Edge Function `bootstrap-admin` v2.
+- [x] Admin suite aplicada: diretório, timeout/ban da comunidade, anúncios, eventos e audit log.
+- [x] Testes transacionais de autorização da admin suite passaram e foram revertidos.
+- [x] Migração de notas aplicada em `hc_projects`.
+- [x] RLS das notas testada com usuário dono e outro usuário.
+- [x] Sincronização opt-in agora inclui perfil, favoritos, projetos e notas.
+- [x] Base do navegador desktop criada em `/desktop` usando isolamento de conteúdo remoto.
+- [x] Service worker usa cache `v7` após a atualização da sincronização.
 
-## Precisa de ação do responsável
+## Segurança — estado atual
 
-- [ ] Criar a primeira conta real no Happy Coding.
-- [ ] Confirmar o e-mail usando o fluxo de teste disponível.
-- [ ] Ativar MFA/TOTP na conta.
-- [ ] Usar a ferramenta de bootstrap com o código de uso único para vincular a conta como admin.
-- [ ] Testar: cadastro → login → post → moderação → publicação → denúncia → revisão.
+- [x] Todas as tabelas novas da admin suite estão com RLS ativo.
+- [x] Admin suite exige membership + AAL2 nas políticas sensíveis.
+- [x] Usuário sancionado não consegue publicar nem denunciar durante a sanção.
+- [x] Admin não consegue sancionar a própria conta pelo modelo atual.
+- [x] Audit log não possui política de update/delete para clientes autenticados.
+- [ ] Security Advisor ainda mostra 1 aviso: **Leaked Password Protection Disabled**.
 
-## Bloqueado por domínio / custo externo
+## Precisa de teste real adicional
 
-- [ ] SMTP de produção para confirmação e recuperação de senha.
-- [ ] Domínio próprio para e-mail de produção no Resend.
-- [ ] Login por telefone/SMS (deixar para etapa futura; normalmente envolve custo).
+- [ ] Sincronização em dois navegadores/dispositivos com a conta real.
+- [ ] Alterar notas em um dispositivo e confirmar recuperação no outro.
+- [ ] Validar conflito quando os dois dispositivos editam o mesmo projeto/nota.
+- [ ] Testar anúncio/evento pelo painel web real com sessão AAL2, além do teste SQL transacional.
+- [ ] Testar timeout/ban/revogação pelo painel web real contra uma segunda conta real.
+- [ ] Testes end-to-end em desktop e mobile.
+
+## Bloqueado / etapa futura com custo externo
+
+- [ ] SMTP de produção para confirmação e recuperação de senha em escala pública.
+- [ ] Domínio próprio para e-mail de produção.
+- [ ] Login por telefone/SMS.
 
 ## Próximo desenvolvimento web
 
-- [ ] Sincronização opt-in de favoritos, projetos e configurações com Supabase.
-- [ ] Interface completa para exclusão/exportação dos dados sincronizados.
+- [ ] Suspensão GLOBAL da conta via server-side/Edge Function, separada do ban da comunidade.
+- [ ] Reversão da suspensão global com MFA e audit log.
+- [ ] Exportação completa dos dados sincronizados.
 - [ ] Editor de arquivos por projeto.
 - [ ] Preview isolado de projetos web.
 - [ ] Escolha explícita de arquivos/trechos a compartilhar com o assistente.
 - [ ] Melhorar compatibilidade/progresso/qualidade da IA local.
 - [ ] Reforçar classificação de conteúdo sem prometer detecção perfeita.
-- [ ] Mais medidas antiabuso e ferramentas de moderação.
-- [ ] Testes end-to-end em desktop e mobile.
 
 ## Navegador desktop
 
@@ -73,4 +88,4 @@ Base criada em `/desktop`.
 
 ## Regra de produto
 
-Não redesenhar a identidade do Happy Coding sem pedido explícito do usuário. Segurança é requisito do produto. Não ativar cobrança, plano pago, domínio, SMS ou API paga sem aprovação explícita.
+Não redesenhar a identidade do Happy Coding sem pedido explícito. Segurança é requisito. Não ativar cobrança, plano pago, domínio, SMS ou API paga sem aprovação explícita.
