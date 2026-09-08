@@ -49,6 +49,31 @@ jobs:
         run: node --test tests/sw.test.cjs
       - name: Check desktop browser core
         run: node --test desktop/tests/*.test.cjs
+      - name: Smoke test live web search
+        env:
+          SEARCH_URL: https://vzfnoaixjgyifutklpwn.supabase.co/functions/v1/web-search
+          SEARCH_KEY: sb_publishable_nQTrMmVzLt0b1t0y-Ob22g_UwF1eNDD
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --retry 2 --retry-delay 2 --max-time 35 \
+            -X POST "$SEARCH_URL" \
+            -H 'content-type: application/json' \
+            -H "apikey: $SEARCH_KEY" \
+            -H 'origin: https://neurovendas.github.io' \
+            --data '{"q":"minecraft"}' \
+            -o /tmp/happy-search.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          payload=json.loads(Path('/tmp/happy-search.json').read_text())
+          results=payload.get('results')
+          assert isinstance(results,list) and results, payload
+          for item in results[:3]:
+              assert isinstance(item,dict), item
+              assert str(item.get('title','')).strip(), item
+              assert str(item.get('url','')).startswith(('http://','https://')), item
+          print(f"live search ok: {len(results)} result(s)")
+          PY
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
