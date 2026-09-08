@@ -20,7 +20,7 @@ O mascote/assistente se chama `=]`.
 
 ## Regra de design mais importante
 
-**NÃO redesenhar o site sem pedido explícito.**
+**NÃO redesenhar o site sem pedido explícito.** Em 2026-09-08, o usuário pediu recuperar o tema original, pois preferia a primeira versão.
 
 O protótipo anterior é a referência visual. Melhorias devem ser incrementais e preservar a identidade existente: aparência de navegador, sidebar, cards de projetos, ferramentas, Dev Pulse e mascote `=]`.
 
@@ -208,6 +208,19 @@ Não ativar cobrança, plano pago, domínio, SMS ou API paga sem aprovação exp
 7. Antes de mexer em Supabase/Resend, usar os conectores autorizados e nunca expor segredos.
 
 ## Próximo ciclo recomendado
+
+### Comunidade e restauração do tema — 2026-09-08
+
+- Referência original recuperada: grafite, verde-lima `#b7f34a`, busca clara, saudação em destaque e mascote verde. Adaptada em `restored-theme.css`, preservando interações e dados locais.
+- Comunidade compartilhada em `#community`: feed público, filtros por código/projeto/conversa, paginação, copiar código e envios por conta. Sem posts fictícios ou execução de código enviado por usuários.
+- `hc_community_posts` no projeto Supabase Happy Coding: RLS permite ler publicados; autor vê/exclui seus envios; todos começam pendentes. Apenas membros de `hc_admin_members` com MFA/AAL2 podem aprovar/rejeitar.
+- Posts com aviso de jogos exigem clique antes da leitura. Moderação é manual; não há promessa de filtro automático perfeito. Sem uploads e sem carregamento de imagens externas dos posts.
+- Cadastro/login e recuperação via e-mail integrados ao Supabase. **E-mail ainda está em teste**, sem SMTP de produção configurado; entrega para o público e URLs de redirecionamento precisam de validação real antes de lançamento amplo. Não desativar confirmação de e-mail para contornar isso.
+- Nenhum usuário/admin real existia na implantação. O desenvolvedor precisa criar sua própria conta; a associação de admin deve ser feita após verificar a identidade, nunca por nome público ou pelo primeiro cadastro. UI permite configurar TOTP, mas isso por si só não concede função de moderador.
+- `community.js` usa SDK Supabase 2.116.0 via import opcional do esm.sh; indisponibilidade de rede/CDN exibe erro e permite repetir. Somente chave publicável no cliente. Sessão da comunidade fica no sessionStorage, separada do perfil local.
+- Favoritos e histórico agora têm listas dentro do app e remoção individual; rotas internas com hash, Voltar/Avançar e navegação móvel. Ferramentas rápidas focam o controle correspondente. Novas sequências de uso começam em 1 dia.
+- `backend/community.sql` documenta o schema aplicado. `backend/community-security-test.sql` verifica autor, outro usuário, visitante, admin sem MFA e com MFA, em transação revertida.
+- O objetivo de navegador real continua exigindo uma versão desktop. O website ainda abre páginas externas no navegador hospedeiro; não afirmar que controla abas/downloads externos ou filtra o conteúdo desses sites.
 
 ### Última manutenção — 2026-09-08
 

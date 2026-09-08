@@ -3,11 +3,12 @@
 // Bump the version whenever an offline shell file changes.
 const SCOPE = new URL(self.registration.scope);
 const CACHE_PREFIX = `happy-coding:${SCOPE.href}:`;
-const CACHE = `${CACHE_PREFIX}v2`;
+const CACHE = `${CACHE_PREFIX}v3`;
 const CORE = [
   './', './index.html', './styles.css', './original-overrides.css',
   './accessibility-pwa.css', './app.js', './ai-local.js',
-  './manifest.webmanifest', './icon.svg'
+  './manifest.webmanifest', './icon.svg',
+  './restored-theme.css', './community.css', './community.js'
 ].map(path => new URL(path, SCOPE).href);
 
 self.addEventListener('install', event => {

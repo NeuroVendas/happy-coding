@@ -29,7 +29,7 @@ const readJson=(k,f)=>{try{return JSON.parse(localStorage.getItem(k))??f}catch{r
 const writeJson=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 const escapeHtml=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 const getLocalProjects=()=>readJson(LOCAL_PROJECTS_KEY,[]);
-const getProjects=()=>[...baseProjects,...getLocalProjects()];
+const getProjects=()=>[...getLocalProjects(),...baseProjects];
 const getBookmarks=()=>readJson(BOOKMARKS_KEY,[]);
 const getHistory=()=>readJson(HISTORY_KEY,[]);
 
@@ -41,14 +41,19 @@ function toast(message){
   t._timer=setTimeout(()=>t.classList.add('hidden'),2400);
 }
 
-function showView(name){
+function showView(name,record=true){
+  if(!views.some(v=>v.dataset.viewPanel===name)) name='home';
+  if(record&&location.hash!==`#${name}`)history.pushState({view:name},'',`#${name}`);
   views.forEach(v=>v.classList.toggle('active',v.dataset.viewPanel===name));
   sideLinks.forEach(b=>b.classList.toggle('active',b.dataset.view===name));
   $('menuPanel').classList.add('hidden');
   if(name==='projects') renderProjects();
   if(name==='settings') updateSettingsCounts();
+  if(name==='bookmarks'||name==='history') renderCollection(name);
+  document.dispatchEvent(new CustomEvent('happy:view',{detail:name}));
   window.scrollTo({top:0,behavior:'smooth'});
 }
+window.addEventListener('popstate',()=>showView(location.hash.slice(1)||'home',false));
 sideLinks.forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
 document.querySelectorAll('[data-view-jump]').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.viewJump)));
 
@@ -57,8 +62,8 @@ function projectCard(p){
     <div class="project-top"><span class="project-symbol">${escapeHtml(p.icon||'•')}</span><button class="project-menu" data-project-menu="${escapeHtml(p.id)}" title="Abrir espaço do projeto">•••</button></div>
     <span class="tech-pill">${escapeHtml(String(p.engine).toUpperCase())}</span>
     <h3>${escapeHtml(p.name)}</h3>
-    <p>${escapeHtml(p.description||'Novo projeto')} · ${escapeHtml(p.edited||'salvo neste navegador')}</p>
-    <footer><span>${escapeHtml(p.version||'local')}</span><button data-open-project="${escapeHtml(p.id)}">Abrir projeto →</button></footer>
+    <p>${escapeHtml(p.description||'Novo projeto')} · ${escapeHtml(p.sample?'projeto de exemplo':p.edited||'salvo neste navegador')}</p>
+    <footer><span>${escapeHtml(p.sample?'Exemplo':p.version||'local')}</span><button data-open-project="${escapeHtml(p.id)}">Abrir projeto →</button></footer>
   </article>`;
 }
 
@@ -194,19 +199,34 @@ function updateSettingsCounts(){const n=getBookmarks().length;$('bookmarkCount')
 $('clearHistory').addEventListener('click',()=>{writeJson(HISTORY_KEY,[]);toast('Histórico local apagado.');});
 $('menuBtn').addEventListener('click',()=>$('menuPanel').classList.toggle('hidden'));
 $('closeMenu').addEventListener('click',()=>$('menuPanel').classList.add('hidden'));
-$('menuBookmarks').addEventListener('click',()=>{
-  const list=getBookmarks();
-  if(!list.length){if(confirm('Nenhum favorito ainda. Salvar a página atual?'))saveCurrentBookmark();return;}
-  const c=prompt('Favoritos:\n\n'+list.map((x,i)=>`${i+1}. ${x.title}`).join('\n')+'\n\nDigite o número para abrir:');
-  const i=Number(c)-1;
-  if(list[i]) navigate(list[i].url);
-});
-$('menuHistory').addEventListener('click',()=>{const l=getHistory();if(!l.length)return toast('Histórico local vazio.');alert('Histórico local recente:\n\n'+l.slice(0,10).map(x=>x.url).join('\n'));});
+$('menuBookmarks').addEventListener('click',()=>showView('bookmarks'));
+$('menuHistory').addEventListener('click',()=>showView('history'));
+function renderCollection(kind){
+  const list=kind==='bookmarks'?getBookmarks():getHistory();
+  const root=$(kind==='bookmarks'?'bookmarksList':'historyList');
+  root.replaceChildren();
+  if(!list.length){const p=document.createElement('p');p.className='empty-state';p.textContent=kind==='bookmarks'?'Nenhum favorito salvo. Abra um endereço e use Ctrl D para guardar aqui.':'Seu histórico está vazio.';root.append(p);return;}
+  list.forEach((item,index)=>{
+    const row=document.createElement('article');row.className='collection-item';
+    const open=document.createElement('button');open.className='collection-open';open.textContent=item.title||item.url;
+    if(item.at){const date=document.createElement('small');date.textContent=new Date(item.at).toLocaleString('pt-BR');open.append(date);}
+    open.addEventListener('click',()=>navigate(item.url));
+    const remove=document.createElement('button');remove.className='secondary-btn';remove.textContent='Remover';
+    remove.addEventListener('click',()=>{const current=kind==='bookmarks'?getBookmarks():getHistory();current.splice(index,1);writeJson(kind==='bookmarks'?BOOKMARKS_KEY:HISTORY_KEY,current);renderCollection(kind);updateSettingsCounts();});
+    row.append(open,remove);root.append(row);
+  });
+}
+$('saveBookmarkView').addEventListener('click',()=>{saveCurrentBookmark();renderCollection('bookmarks');});
+$('clearHistoryView').addEventListener('click',()=>{if(confirm('Apagar o histórico deste dispositivo?')){writeJson(HISTORY_KEY,[]);renderCollection('history');}});
 
 $('warningCancel').addEventListener('click',()=>{warningUrl=null;$('warningModal').classList.add('hidden')});
 $('warningContinue').addEventListener('click',()=>{const u=warningUrl;warningUrl=null;$('warningModal').classList.add('hidden');if(u){addHistory(u);window.open(u,'_blank','noopener')}});
 document.querySelectorAll('[data-external]').forEach(btn=>btn.addEventListener('click',()=>navigate(btn.dataset.external)));
-document.querySelectorAll('[data-tool]').forEach(btn=>btn.addEventListener('click',()=>showView('tools')));
+document.querySelectorAll('[data-tool]').forEach(btn=>btn.addEventListener('click',()=>{
+  showView('tools');
+  const target=$({json:'jsonInput',color:'colorPicker',regex:'regexPattern',focus:'focusStart'}[btn.dataset.tool]);
+  target?.focus();target?.scrollIntoView({behavior:'smooth',block:'center'});
+}));
 
 $('formatJson').addEventListener('click',()=>{try{$('jsonInput').value=JSON.stringify(JSON.parse($('jsonInput').value),null,2);$('jsonStatus').textContent='JSON válido ✓'}catch{$('jsonStatus').textContent='JSON inválido'}});
 $('colorPicker').addEventListener('input',e=>{const v=e.target.value.toUpperCase();$('colorPreview').style.background=v;$('colorValue').textContent=v});
@@ -277,10 +297,10 @@ function setupGreeting(){
   const h=new Date().getHours();
   $('greeting').textContent=h<12?'Bom dia':h<18?'Boa tarde':'Boa noite';
   const stored=readJson(STREAK_KEY,null),today=new Date().toISOString().slice(0,10);
-  let days=12;
+  let days=1;
   if(!stored)writeJson(STREAK_KEY,{last:today,days});
   else{
-    days=stored.days||12;
+    days=stored.days||1;
     if(stored.last!==today){const diff=(new Date(today)-new Date(stored.last))/86400000;days=diff===1?days+1:diff>1?1:days;writeJson(STREAK_KEY,{last:today,days});}
   }
   $('streakDays').textContent=String(days);
@@ -309,3 +329,4 @@ setupProfile();
 renderProjects();
 renderClock();
 updateSettingsCounts();
+if(views.some(v=>v.dataset.viewPanel===location.hash.slice(1)))showView(location.hash.slice(1),false);

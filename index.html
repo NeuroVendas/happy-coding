@@ -15,6 +15,8 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="original-overrides.css">
   <link rel="stylesheet" href="accessibility-pwa.css">
+  <link rel="stylesheet" href="restored-theme.css">
+  <link rel="stylesheet" href="community.css">
 </head>
 <body>
 <a class="skip-link" href="#mainView">Pular para o conteúdo</a>
@@ -51,6 +53,9 @@
         <button class="side-link" data-view="projects"><span>▱</span> Projetos <b id="projectCount">3</b></button>
         <button class="side-link" data-view="tools"><span>⌘</span> Ferramentas</button>
         <button class="side-link" data-view="discover"><span>✦</span> Descobrir</button>
+        <button class="side-link" data-view="community"><span>◎</span> Comunidade</button>
+        <button class="side-link" data-view="bookmarks"><span>☆</span> Favoritos</button>
+        <button class="side-link" data-view="history"><span>◷</span> Histórico</button>
       </nav>
       <p class="eyebrow">PROJETOS RECENTES</p>
       <div id="recentProjects" class="recent-projects"></div>
@@ -87,6 +92,14 @@
       <section class="view" data-view-panel="tools"><div class="page-heading"><span class="section-kicker">FERRAMENTAS</span><h1>Ferramentas rápidas</h1></div><div class="tool-workbench"><article><h3>{ } JSON tidy</h3><textarea id="jsonInput">{"happy":true,"coding":"=]"}</textarea><div class="inline-actions"><button class="primary-btn" id="formatJson">Formatar</button><span id="jsonStatus"></span></div></article><article><h3>◉ Color lab</h3><label>Escolha uma cor <input type="color" id="colorPicker" value="#59c5ec"></label><div class="color-preview" id="colorPreview"><code id="colorValue">#59C5EC</code></div></article><article><h3>.* Regex tester</h3><input id="regexPattern" value="happy|coding"><textarea id="regexText">Happy Coding =] é um espaço para coding.</textarea><div class="inline-actions"><button class="primary-btn" id="testRegex">Testar</button><span id="regexStatus"></span></div></article><article><h3>◷ Focus run</h3><div class="focus-clock" id="focusClock">25:00</div><div class="inline-actions"><button class="primary-btn" id="focusStart">Iniciar</button><button class="secondary-btn" id="focusReset">Resetar</button></div></article></div></section>
       <section class="view" data-view-panel="discover"><div class="page-heading"><span class="section-kicker">DESCOBRIR</span><h1>Descobrir</h1></div><div class="discover-grid"><button data-external="https://docs.godotengine.org"><b>◆ Godot Docs</b><span>Documentação oficial do Godot</span></button><button data-external="https://developer.mozilla.org"><b>MDN Web Docs</b><span>HTML, CSS e JavaScript</span></button><button data-external="https://itch.io/jams"><b>itch.io jams</b><span>Game jams e desafios</span></button><button data-external="https://github.com/explore"><b>GitHub Explore</b><span>Projetos e código aberto</span></button></div></section>
       <section class="view" data-view-panel="settings"><div class="page-heading"><span class="section-kicker">AJUSTES</span><h1>Ajustes</h1></div><div class="settings-list"><article><div><strong>Filtro de conteúdo adulto</strong><small>Obrigatório em todas as contas.</small></div><span class="locked">🔒 Sempre ativo</span></article><article><div><strong>Busca segura</strong><small>Proteção aplicada às pesquisas iniciadas pelo Happy Coding.</small></div><span class="locked">🔒 Sempre ativo</span></article><article><div><strong>Histórico</strong><small>Fica apenas neste navegador.</small></div><button class="secondary-btn" id="clearHistory">Limpar</button></article><article><div><strong>Favoritos</strong><small>Salvos localmente por enquanto.</small></div><span id="bookmarkCount">0 salvos</span></article><article><div><strong>Instalação</strong><small>Instale o Happy Coding como aplicativo quando o navegador permitir.</small></div><button class="secondary-btn" id="installSettingsBtn">Instalar app</button></article></div></section>
+      <section class="view" data-view-panel="bookmarks"><div class="page-heading"><span class="section-kicker">SUA BIBLIOTECA</span><h1>Favoritos</h1><p>Seus endereços salvos neste dispositivo.</p><button class="primary-btn" id="saveBookmarkView">Salvar endereço atual</button></div><div id="bookmarksList" class="collection-list"></div></section>
+      <section class="view" data-view-panel="history"><div class="page-heading"><span class="section-kicker">NAVEGAÇÃO LOCAL</span><h1>Histórico</h1><p>Links abertos pelo Happy Coding neste dispositivo.</p><button class="secondary-btn" id="clearHistoryView">Limpar histórico</button></div><div id="historyList" class="collection-list"></div></section>
+      <section class="view" data-view-panel="community">
+        <div class="page-heading community-heading"><div><span class="section-kicker">FEITO POR QUEM CRIA</span><h1>Comunidade <span class="beta-badge">BETA</span></h1><p>Compartilhe uma ideia, um trecho de código ou o progresso do seu projeto.</p></div><button class="primary-btn" id="communityWrite">+ Criar post</button></div>
+        <div class="community-toolbar"><label class="sr-only" for="communityFilter">Filtrar posts</label><select id="communityFilter"><option value="all">Todos os posts</option><option value="code">Código</option><option value="project">Projetos</option><option value="discussion">Conversas</option><option value="mine">Meus envios</option></select><button class="secondary-btn" id="communityRefresh">Atualizar</button><button class="secondary-btn" id="communityAccount">Entrar / criar conta</button><button class="secondary-btn hidden" id="communityModerate">Revisar posts</button></div>
+        <p class="community-note">Leitura aberta. Posts passam por revisão antes de aparecer aqui. Códigos são exibidos como texto, sem execução automática.</p>
+        <p id="communityStatus" role="status" aria-live="polite"></p><div id="communityFeed" class="community-feed"></div><button id="communityMore" class="secondary-btn hidden">Carregar mais</button>
+      </section>
     </main>
   </div>
 </div>
@@ -110,6 +123,8 @@
 <div class="modal hidden" id="warningModal"><div class="modal-card warning-card"><span class="warning-pill">AVISO DE CONTEÚDO</span><h2>Este link pode conter violência, terror ou linguagem forte.</h2><p>Conteúdo fictício desse tipo pode ser acessado, mas o Happy Coding mostra um aviso antes de continuar.</p><div class="modal-actions"><button class="secondary-btn" id="warningCancel">Voltar</button><button class="primary-btn" id="warningContinue">Continuar</button></div></div></div>
 <div class="modal hidden" id="blockedModal"><div class="modal-card blocked-card"><span class="blocked-icon">◆</span><h2>Pesquisa bloqueada</h2><p>O filtro obrigatório do Happy Coding impediu esta pesquisa porque ela parece buscar conteúdo adulto explícito.</p><button class="primary-btn" data-close-modal="blockedModal">Entendi</button></div></div>
 <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
+<nav class="mobile-nav" aria-label="Navegação principal"><button data-view="home">⌂ Início</button><button data-view="projects">▱ Projetos</button><button data-view="tools">⌘ Tools</button><button data-view="community">◎ Comunidade</button><button data-view="settings">⚙ Ajustes</button></nav>
 <script src="app.js"></script>
+<script type="module" src="community.js"></script>
 </body>
 </html>
