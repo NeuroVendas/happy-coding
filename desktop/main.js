@@ -45,11 +45,11 @@ function handleShortcut(tab,event,input){
   if(input.type!=='keyDown')return;
   const key=String(input.key||'').toLowerCase();
   const mod=process.platform==='darwin'?input.meta:input.control;
+  if(mod&&input.shift&&key==='t'){event.preventDefault();restoreClosedTab();return;}
   if(mod&&key==='l'){event.preventDefault();chromeView.webContents.send('hc:focus-address');return;}
   if(mod&&key==='t'){event.preventDefault();createTab(HOME,true);return;}
   if(mod&&key==='w'){event.preventDefault();if(tab.id===activeTabId)closeTab(tab.id);return;}
   if(mod&&key==='tab'){event.preventDefault();cycleTabs(input.shift?-1:1);return;}
-  if(mod&&input.shift&&key==='t'){event.preventDefault();restoreClosedTab();return;}
   if(mod&&key==='r'){event.preventDefault();reloadActive();return;}
   if(input.alt&&key==='arrowleft'){event.preventDefault();goBack();return;}
   if(input.alt&&key==='arrowright'){event.preventDefault();goForward();}
