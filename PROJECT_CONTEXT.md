@@ -1,241 +1,336 @@
 # Happy Coding =] — Project Context / Work Handoff
 
-> Leia este arquivo antes de alterar o projeto. Ele existe para permitir que outra sessão do ChatGPT/Work continue o desenvolvimento sem reinventar o produto.
+> Leia este arquivo antes de alterar o projeto. Ele existe para permitir que outra sessão continue o desenvolvimento sem reinventar o produto.
 
-## Links principais
+## Projeto correto
 
-- Repositório: `NeuroVendas/happy-coding`
+- Nome: **Happy Coding =]**
+- GitHub: `NeuroVendas/happy-coding`
+- Branch principal: `main`
 - Site LIVE: https://neurovendas.github.io/happy-coding/
-- Protótipo anterior (referência visual): https://happy-coding-dev.viniciuscontrole.chatgpt.site/
-- Deploy: GitHub Pages via `.github/workflows/pages.yml`
-
-## O que é o Happy Coding =]
-
-Happy Coding =] começou como um website com aparência de navegador voltado para programação, criação de jogos e projetos. A meta é evoluir em duas direções conectadas:
-
-1. uma aplicação web pública, leve e instalável;
-2. futuramente um navegador/app desktop real.
-
-O mascote/assistente se chama `=]`.
+- Supabase correto: **Happy Coding** — `vzfnoaixjgyifutklpwn` — `sa-east-1`
+- NÃO tocar em `NeuroVendas/evolution-neuro`.
+- NÃO tocar no Supabase antigo `xzskhfhjyvroyzydetot` (`NeuroVendas's Project`).
 
 ## Regra de design mais importante
 
-**NÃO redesenhar o site sem pedido explícito.** Em 2026-09-08, o usuário pediu recuperar o tema original, pois preferia a primeira versão.
+**NÃO redesenhar o Happy Coding sem pedido explícito.**
 
-O protótipo anterior é a referência visual. Melhorias devem ser incrementais e preservar a identidade existente: aparência de navegador, sidebar, cards de projetos, ferramentas, Dev Pulse e mascote `=]`.
+Preservar a identidade atual:
+- grafite/escuro;
+- lime `#b7f34a`;
+- marca `happy coding =]`;
+- mascote `=]`;
+- aparência browser/workspace;
+- sidebar;
+- Workspace Online;
+- “O que vamos criar hoje?”;
+- cards Soulbound, Pixel Forge e Quiet Forest;
+- ferramentas e Dev Pulse.
 
-Já houve uma tentativa de reconstrução no GitHub que mudou demais o layout. Isso foi corrigido. Não repetir essa abordagem.
+Melhorias devem ser incrementais por cima do visual atual.
 
-## Prioridades oficiais
+## Visão do produto
 
-### 1. Acesso melhor para todo mundo
+Happy Coding =] deve evoluir para:
+1. workspace web/PWA público, útil sem login obrigatório;
+2. comunidade para devs/criadores;
+3. conta opcional com sincronização;
+4. IA `=]` útil com contexto escolhido explicitamente;
+5. editor/projetos reais;
+6. painel administrativo;
+7. navegador desktop real para Windows.
 
-- Deve abrir e ser útil sem login obrigatório.
-- Visitantes podem usar funções locais.
-- Conta deve ser opcional para sincronização e recursos adicionais.
-- Funcionar bem em PC e celular.
-- Manter PWA instalável.
-- Carregar rápido.
-- Não exigir domínio pago para continuar o desenvolvimento.
-- Não ativar serviços pagos ou custos sem aprovação explícita.
+Prioridade de custo: **0 sempre que possível**. Não ativar cobrança, domínio, SMS ou APIs pagas sem autorização explícita.
 
-### 2. Assistente `=]` real
+## Segurança — regras permanentes
 
-O mascote não deve ficar limitado a frases prontas.
+- Sem acesso automático da IA aos arquivos.
+- Usuário escolhe explicitamente o que compartilhar.
+- Não executar automaticamente código, comandos ou ações sugeridas pela IA.
+- Nunca expor `service_role`/secret no frontend.
+- Publishable key pode ficar no frontend somente com RLS correto.
+- RLS obrigatório em tabelas expostas.
+- Autorização de admin deve ser server/db enforced.
+- Admin sensível exige MFA/AAL2.
+- Não usar `user_metadata` para autorização.
+- Filtro adulto e Safe Search não podem ser desligados pelo admin.
+- Violência fictícia/horror/profanidade em jogos pode existir com aviso; conteúdo adulto/exploratório e incentivo perigoso real devem ser bloqueados conforme as regras do produto.
+- Não prometer segurança ou filtragem perfeita.
 
-Objetivos:
-- explicar erros;
-- ajudar com código;
-- orientar projetos;
-- entender contexto que o usuário escolheu compartilhar;
-- futuramente poder trabalhar com o projeto aberto.
+## Estado REAL verificado em 2026-09-08
 
-Regras:
-- não acessar arquivos pessoais automaticamente;
-- usuário escolhe o que compartilhar;
-- nunca expor API keys no frontend;
-- evitar custo surpresa.
+### GitHub
 
-Estado atual:
-- existe um modo opcional de IA local grátis em `ai-local.js`;
-- ele é ativado manualmente para não baixar modelo automaticamente;
-- a experiência local é experimental e deve ter fallback claro em aparelhos incompatíveis/fracos.
+O ciclo começou no HEAD `94028ba4fdc3b028fd6d3b38f192a57350976974`.
 
-### 3. Tirar recursos do “modo enfeite”
-
-Tudo visível deve caminhar para uma função real.
-
-Já funcionam ou começaram a funcionar:
-- busca;
-- SafeSearch inicial;
-- histórico local;
-- favoritos locais;
-- criação de projetos locais;
-- notas/espaço do projeto local;
-- JSON tidy;
-- Color Lab;
-- Regex tester;
-- Focus Run;
-- perfil local/visitante;
-- feedback via GitHub Issues;
-- PWA/install;
-- aba/link Godot Docs;
-- mascote com modo local de IA opcional.
-
-Próximos candidatos:
-- editor de código real;
-- arquivos por projeto;
-- console/preview;
-- sincronização com conta;
-- abas reais no app desktop;
-- downloads reais no app desktop;
-- painel admin.
-
-## Segurança / fronteiras do produto
-
-Segurança é requisito central.
-
-Decisões já tomadas:
-- filtro de conteúdo adulto deve ser obrigatório, sem opção comum de desativar;
-- conteúdo explícito adulto deve ser bloqueado;
-- jogos com violência fictícia, terror ou linguagem forte podem ser permitidos com aviso;
-- IA não pode receber arquivos pessoais automaticamente;
-- nenhuma chave secreta no frontend;
-- nada de executar comandos sugeridos pela IA automaticamente;
-- permissões sensíveis devem ser negadas por padrão;
-- histórico deve ficar local por padrão, não sincronizado automaticamente;
-- antes de lançamento público, reforçar muito o filtro — o atual é apenas uma camada inicial e não deve ser tratado como proteção perfeita.
-
-## Backend / contas
+Alterações deste ciclo incluem:
+- sincronização de notas em `account-sync.js`;
+- cache do service worker elevado para `v7` e teste correspondente;
+- documentação atualizada para refletir estado real;
+- `backend/project-sync-notes.sql` marcado como aplicado.
 
 ### Supabase
 
-Existe um projeto separado chamado `Happy Coding`.
+Projeto usado e verificado: `vzfnoaixjgyifutklpwn`.
 
-Estruturas já criadas/checadas anteriormente:
-- `hc_profiles`
-- `hc_projects`
-- `hc_admin_members`
-- `hc_content_rules`
-- favoritos sincronizados
-- configurações por usuário
+Estado confirmado:
+- 1 usuário real;
+- e-mail confirmado;
+- 1 fator MFA verificado;
+- 1 membro em `hc_admin_members`;
+- 1 usuário no diretório administrativo após backfill;
+- `delete-account` ativa com JWT;
+- `bootstrap-admin` ativa na versão 2, mas permanentemente fechada.
 
-Segurança já verificada anteriormente:
-- RLS habilitado;
-- dados presos ao `auth.uid()` do usuário;
-- admin protegido com MFA/AAL2;
-- Security Advisor estava com 0 alertas no momento da auditoria.
+### Migrations aplicadas
 
-Não misturar com o projeto antigo `NeuroVendas` no Supabase.
+Existentes antes deste ciclo:
+- `20260908005015 happy_coding_private_data_foundation`
+- `20260908012320 add_browser_bookmarks_and_settings`
+- `20260908195123 happy_coding_moderated_community`
+- `20260908195153 happy_coding_public_feed_policy`
 
-### Resend
+Aplicadas neste ciclo:
+- `20260908214303 admin_suite`
+- `20260908214414 project_sync_notes`
 
-Resend foi conectado e acessado com sucesso anteriormente.
+### Admin suite
 
-Estado conhecido:
-- nenhuma configuração de domínio de produção pronta;
-- existe uma chave chamada `Onboarding` na conta;
-- sem domínio próprio, manter e-mail em modo de teste/desenvolvimento;
-- produção com confirmação/recuperação para qualquer usuário exigirá uma solução de e-mail adequada.
+Tabelas novas, todas com RLS ativo:
+- `hc_user_directory`
+- `hc_user_sanctions`
+- `hc_announcements`
+- `hc_events`
+- `hc_admin_audit_log`
 
-Nunca pedir ou colocar chaves secretas em chat, issue ou repositório público.
+Sanções separadas:
+- `timeout` da comunidade;
+- `ban` da comunidade;
+- suspensão GLOBAL ainda NÃO implementada.
 
-## Autenticação desejada
+Testes transacionais com fixtures revertidos passaram para:
+- admin sem MFA não consegue sancionar;
+- admin com AAL2 lista diretório e modera;
+- timeout;
+- ban;
+- revogação de sanção;
+- usuário sancionado não publica;
+- usuário sancionado não denuncia;
+- admin não sanciona a própria conta;
+- anúncio publicar/despublicar;
+- evento publicar/despublicar;
+- audit log.
 
-Meta:
-- e-mail + senha;
-- Google;
-- confirmação e recuperação de senha;
-- telefone/SMS apenas em etapa posterior por causa de custo/complexidade.
+Nenhum fixture desses testes foi mantido.
 
-Não colocar botões falsos de login. Se uma função ainda não está conectada, dizer claramente que está em desenvolvimento.
+### Bootstrap admin
 
-## Arquivos importantes atuais
+O bootstrap antigo continha um hash de código de primeiro admin. Como já existe um admin real e o código antigo foi exposto em conversa anterior, a Edge Function foi atualizada.
 
-- `index.html` — estrutura principal
-- `styles.css` — estilo base
-- `original-overrides.css` — correções para preservar a hierarquia visual do protótipo original
-- `app.js` — interações e funções locais
-- `ai-local.js` — assistente local opcional
-- `manifest.webmanifest` — PWA
-- `sw.js` — service worker/cache
-- `accessibility-pwa.css` — melhorias de acesso/PWA
-- `icon.svg` — ícone atual
-- `.github/workflows/pages.yml` — deploy automático
+Estado atual:
+- `bootstrap-admin` versão 2;
+- `verify_jwt: true`;
+- não contém o hash/código antigo;
+- não usa `service_role`;
+- responde `bootstrap_closed`.
 
-## Deploy
+Não reabrir automaticamente. Não promover “primeiro usuário”.
 
-Push/commit na branch principal dispara GitHub Pages automaticamente.
+### Notas de projetos / sincronização
 
-Site esperado após deploy:
-https://neurovendas.github.io/happy-coding/
+`hc_projects` agora possui:
+- `notes text not null default ''`;
+- `updated_at timestamptz`;
+- limite de 20.000 caracteres para notas.
 
-Ao alterar o projeto:
-1. preservar o visual atual;
-2. implementar uma função por vez;
-3. verificar se elementos existentes continuam funcionando;
-4. deixar estados incompletos explícitos;
-5. confirmar o workflow do Pages depois de mudanças relevantes.
+RLS foi testado em transação:
+- dono lê/edita suas notas;
+- outro usuário não lê;
+- outro usuário não altera;
+- limite de tamanho funciona;
+- fixtures foram revertidos.
 
-## Feedback
+`account-sync.js` agora sincroniza, quando o usuário ativa o opt-in:
+- perfil;
+- favoritos;
+- projetos;
+- notas.
 
-O botão de feedback já abre GitHub Issues.
+Histórico continua local.
 
-Existe pelo menos a Issue #1 como teste inicial. Tratar Issues como fonte de feedback/bugs, mas não executar automaticamente qualquer sugestão sem avaliar segurança e coerência com o produto.
+Na primeira mesclagem, uma nota local existente pode preencher a nuvem se a nota cloud estiver vazia. Quando há nota cloud não vazia, ela é usada como fonte na hidratação atual. Ainda falta definir UX/estratégia explícita para conflitos simultâneos entre dois dispositivos.
 
-## Restrições de custo
+### Security Advisor
 
-Prioridade atual: continuar com custo `0` enquanto possível.
+Depois das migrations, não surgiram findings de RLS das novas tabelas.
 
-Preferir:
-- GitHub Pages;
-- PWA;
-- recursos locais;
-- free tiers seguros;
-- IA local opcional;
-- Supabase/Resend apenas dentro dos limites gratuitos conhecidos.
+Há 1 aviso atual:
+- **Leaked Password Protection Disabled**.
 
-Não ativar cobrança, plano pago, domínio, SMS ou API paga sem aprovação explícita.
+Este aviso é de configuração do Supabase Auth e continua pendente.
 
-## O que fazer primeiro numa nova sessão Work
+## Conta / autenticação
 
-1. Ler este arquivo inteiro.
-2. Ler `index.html`, `app.js`, `original-overrides.css` e `ai-local.js`.
-3. Abrir o site LIVE e comparar com o estado do repo.
-4. Checar Issues abertas.
-5. Continuar as três prioridades: acesso → IA → utilidade real.
-6. Não redesenhar o site.
-7. Antes de mexer em Supabase/Resend, usar os conectores autorizados e nunca expor segredos.
+Área principal: `account.html` + `account.js`.
 
-## Próximo ciclo recomendado
+Deve centralizar:
+- login;
+- cadastro;
+- logout;
+- perfil;
+- MFA/TOTP;
+- sincronização;
+- recuperação de senha;
+- exclusão da conta;
+- acesso ao admin quando autorizado.
 
-### Comunidade e restauração do tema — 2026-09-08
+A Comunidade pode ter atalhos, mas não pode ser o único lugar para administrar a conta.
 
-- Referência original recuperada: grafite, verde-lima `#b7f34a`, busca clara, saudação em destaque e mascote verde. Adaptada em `restored-theme.css`, preservando interações e dados locais.
-- Comunidade compartilhada em `#community`: feed público, filtros por código/projeto/conversa, paginação, copiar código e envios por conta. Sem posts fictícios ou execução de código enviado por usuários.
-- `hc_community_posts` no projeto Supabase Happy Coding: RLS permite ler publicados; autor vê/exclui seus envios; todos começam pendentes. Apenas membros de `hc_admin_members` com MFA/AAL2 podem aprovar/rejeitar.
-- Posts com aviso de jogos exigem clique antes da leitura. Moderação é manual; não há promessa de filtro automático perfeito. Sem uploads e sem carregamento de imagens externas dos posts.
-- Cadastro/login e recuperação via e-mail integrados ao Supabase. **E-mail ainda está em teste**, sem SMTP de produção configurado; entrega para o público e URLs de redirecionamento precisam de validação real antes de lançamento amplo. Não desativar confirmação de e-mail para contornar isso.
-- Nenhum usuário/admin real existia na implantação. O desenvolvedor precisa criar sua própria conta; a associação de admin deve ser feita após verificar a identidade, nunca por nome público ou pelo primeiro cadastro. UI permite configurar TOTP, mas isso por si só não concede função de moderador.
-- `community.js` usa SDK Supabase 2.116.0 via import opcional do esm.sh; indisponibilidade de rede/CDN exibe erro e permite repetir. Somente chave publicável no cliente. Sessão da comunidade fica no sessionStorage, separada do perfil local.
-- Favoritos e histórico agora têm listas dentro do app e remoção individual; rotas internas com hash, Voltar/Avançar e navegação móvel. Ferramentas rápidas focam o controle correspondente. Novas sequências de uso começam em 1 dia.
-- `backend/community.sql` documenta o schema aplicado. `backend/community-security-test.sql` verifica autor, outro usuário, visitante, admin sem MFA e com MFA, em transação revertida.
-- O objetivo de navegador real continua exigindo uma versão desktop. O website ainda abre páginas externas no navegador hospedeiro; não afirmar que controla abas/downloads externos ou filtra o conteúdo desses sites.
+`account.js` já faz upsert do próprio usuário em `hc_user_directory` após sessão válida. O backfill atual inseriu o usuário real existente no diretório.
 
-### Última manutenção — 2026-09-08
+## Comunidade
 
-- Corrigido o service worker: cache isolado pelo endereço do Happy Coding, sem apagar caches de outros apps.
-- Apenas os arquivos públicos listados em `CORE` são armazenados na instalação; respostas de navegação/API não são gravadas durante o uso.
-- Offline: páginas usam o HTML salvo; arquivos JavaScript/CSS nunca recebem HTML como substituto.
-- `ai-local.js` faz parte do shell offline. Biblioteca e modelo da IA ainda precisam do download inicial autorizado pelo usuário.
-- Testes: `node --test tests/sw.test.cjs`, também executados antes do deploy do Pages.
-- Ao mudar arquivos do shell, aumentar a versão de `CACHE` em `sw.js` e atualizar a versão esperada no teste para renovar a cópia offline.
-- Visual e armazenamento de projetos/perfil permanecem como estavam. Login/sincronização e reforço do filtro continuam pendentes.
+Arquivos principais:
+- `community.js`
+- `community.css`
+- `safety-ui.js`
 
-- estabilizar PWA/mobile;
-- tornar perfil/login real sem bloquear visitante;
-- sincronizar projetos/favoritos/configurações via Supabase;
-- melhorar o `=]` com contexto escolhido pelo usuário;
-- criar editor de código real dentro dos projetos;
-- continuar substituindo placeholders por funções verdadeiras;
-- reforçar segurança e filtragem antes de qualquer lançamento amplo.
+Regras:
+- posts novos entram `pending`;
+- só `published` aparece publicamente;
+- admin + MFA aprova/rejeita;
+- código é exibido como texto, nunca executado automaticamente;
+- denúncias usam `hc_community_reports`;
+- não criar posts falsos.
+
+## Admin
+
+Arquivos:
+- `admin.html`
+- `admin.js`
+
+Áreas:
+- visão geral;
+- usuários;
+- moderação;
+- denúncias;
+- sanções;
+- anúncios;
+- eventos;
+- audit log.
+
+Próximo reforço administrativo:
+- suspensão GLOBAL server-side;
+- reversão server-side;
+- admin + MFA obrigatório;
+- audit log obrigatório;
+- não expor segredo no browser.
+
+## IA =]
+
+Arquivo principal: `ai-local.js`.
+
+Modelo local atual:
+- `HuggingFaceTB/SmolLM2-360M-Instruct`
+- Transformers.js
+
+Regras:
+- download somente quando o usuário pede;
+- sem acesso automático a arquivos;
+- comandos de contexto explícito `/projeto`, `/contexto`, `/sem-projeto`;
+- contexto pode incluir nome, tecnologia, descrição e notas escolhidas/salvas;
+- próxima etapa: seleção explícita de arquivos/snippets.
+
+## Editor / workspace
+
+Próximas funções:
+- editor real;
+- arquivos por projeto;
+- snippets;
+- salvar/importar/exportar;
+- preview web isolado/sandboxed;
+- IA analisar somente arquivos selecionados.
+
+Nunca executar código não confiável no contexto privilegiado da conta/app.
+
+## Browser desktop
+
+Base Electron em `/desktop`.
+
+Segurança planejada/implementada na base:
+- `contextIsolation: true`;
+- `sandbox: true`;
+- `nodeIntegration: false`;
+- `webSecurity: true`;
+- UI privilegiada separada do conteúdo remoto;
+- câmera/mic/geolocation negados por padrão;
+- popups controlados.
+
+Ainda falta:
+- abas reais completas;
+- downloads seguros;
+- histórico/favoritos desktop;
+- filtros no main process;
+- installer Windows;
+- testes Windows;
+- atualização segura.
+
+Não confundir o PWA com o browser desktop completo.
+
+## PWA / CI / deploy
+
+Arquivos:
+- `sw.js`
+- `tests/sw.test.cjs`
+- `manifest.webmanifest`
+- `.github/workflows/pages.yml`
+
+Estado atual do cache esperado após este ciclo: `v7`.
+
+Workflow do Pages executa:
+- `node --check` nos módulos JS relevantes;
+- `node --test tests/sw.test.cjs`;
+- deploy GitHub Pages.
+
+Nunca afirmar deploy concluído até o workflow reportar `success`.
+
+## E-mail
+
+Site URL e redirect devem permanecer:
+- `https://neurovendas.github.io/happy-coding/`
+
+Não voltar para localhost.
+Não desativar confirmação de e-mail.
+SMTP de produção/domínio próprio ficam para etapa futura e não devem gerar custo sem aprovação.
+
+## Próxima ordem de execução
+
+1. Confirmar CI/Pages do HEAD atual.
+2. Testar sincronização real em dois navegadores/dispositivos.
+3. Testar admin pelo frontend real com uma segunda conta quando disponível.
+4. Implementar suspensão GLOBAL server-side com MFA + audit log.
+5. Melhorar tratamento de erro do admin para nunca registrar/mostrar sucesso após falha.
+6. Seguir para editor/arquivos/preview isolado.
+7. Evoluir IA com seleção explícita de arquivos.
+8. Evoluir browser desktop real.
+
+## Não fazer
+
+- não renomear Happy Coding;
+- não redesenhar sem pedido;
+- não tocar `evolution-neuro`;
+- não tocar Supabase antigo;
+- não criar branch Supabase paga sem autorização;
+- não comprar domínio/serviço;
+- não expor secrets;
+- não colocar `service_role` no frontend;
+- não desativar confirmação de e-mail;
+- não desativar filtro adulto;
+- não dar acesso automático da IA aos arquivos;
+- não executar código automaticamente;
+- não criar posts fake;
+- não afirmar feature funcionando sem teste;
+- não apagar dados existentes;
+- não substituir `main` sem conferir o HEAD;
+- usar `apply_migration` para DDL no Supabase.
