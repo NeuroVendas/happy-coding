@@ -2,170 +2,152 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#0b0e13">
-  <meta name="description" content="Happy Coding =] — um espaço seguro para criar, programar e explorar.">
   <title>Happy Coding =]</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="app-shell">
-    <header class="browser-chrome">
-      <div class="tabs-row">
-        <div class="tab active"><span class="tab-dot">=]</span><span>Happy Coding</span><button aria-label="Fechar aba">×</button></div>
-        <button class="tab-add" id="newTabBtn" title="Nova aba">+</button>
-        <div class="window-spacer"></div>
-        <span class="preview-badge">LIVE DEV</span>
-      </div>
-      <div class="nav-row">
-        <button class="nav-btn" id="backBtn" title="Voltar">←</button>
-        <button class="nav-btn" id="forwardBtn" title="Avançar">→</button>
-        <button class="nav-btn" id="reloadBtn" title="Atualizar">↻</button>
-        <button class="nav-btn" id="homeBtn" title="Início">⌂</button>
-        <form class="address-wrap" id="addressForm">
-          <span class="shield" title="Proteção obrigatória ativa">◆</span>
-          <input id="addressInput" autocomplete="off" spellcheck="false" value="happy://home" aria-label="Pesquisar ou digitar endereço">
-          <kbd>⌘ K</kbd>
-        </form>
-        <button class="nav-btn" id="bookmarkBtn" title="Favoritar">☆</button>
-        <button class="nav-btn" id="menuBtn" title="Menu">•••</button>
-      </div>
-    </header>
-
-    <div class="workspace">
-      <aside class="sidebar">
-        <div class="brand">happy coding <span>=]</span></div>
-        <p class="eyebrow">SEU ESPAÇO</p>
-        <nav>
-          <button class="side-link active" data-view="home"><span>⌂</span> Início</button>
-          <button class="side-link" data-view="projects"><span>▱</span> Projetos <b id="projectCount">3</b></button>
-          <button class="side-link" data-view="tools"><span>⌘</span> Ferramentas</button>
-          <button class="side-link" data-view="discover"><span>✦</span> Descobrir</button>
-        </nav>
-        <p class="eyebrow">PROJETOS RECENTES</p>
-        <div id="recentProjects" class="recent-projects"></div>
-        <div class="sidebar-bottom">
-          <button class="side-link" id="feedbackBtn"><span>?</span> Feedback</button>
-          <button class="side-link" data-view="settings"><span>⚙</span> Ajustes</button>
-        </div>
-      </aside>
-
-      <main class="main" id="mainView">
-        <section class="view active" data-view-panel="home">
-          <div class="topline">
-            <span class="online"><i></i> WORKSPACE ONLINE</span>
-            <span class="protection">◆ proteção obrigatória ativa</span>
-          </div>
-
-          <div class="hero">
-            <div>
-              <p class="greeting" id="greeting">Boa noite</p>
-              <h1>O que vamos criar hoje? <span>✦</span></h1>
-              <p>Um espaço para programar, aprender e experimentar com segurança.</p>
-            </div>
-            <div class="streak"><strong>⚡ <span id="streakDays">12</span></strong><small>dias criando direto</small></div>
-          </div>
-
-          <form class="universal-search" id="universalSearch">
-            <span>⌕</span>
-            <input id="searchInput" placeholder="Busca universal" autocomplete="off">
-            <kbd>Ctrl K</kbd>
-            <button>Buscar ↗</button>
-          </form>
-
-          <div class="section-head">
-            <div><span class="section-kicker">CONTINUE CRIANDO</span><h2>Seus projetos</h2></div>
-            <button class="primary-btn" id="newProjectBtn">+ Novo projeto</button>
-          </div>
-          <div class="project-grid" id="projectGrid"></div>
-
-          <div class="section-head compact">
-            <div><span class="section-kicker">ATALHOS</span><h2>Ferramentas rápidas</h2></div>
-            <button class="text-btn" data-view-jump="tools">Ver todas →</button>
-          </div>
-          <div class="tool-grid">
-            <button class="tool-card" data-tool="json"><span>{ }</span><div><strong>JSON tidy</strong><small>Formatar e validar</small></div><b>↗</b></button>
-            <button class="tool-card" data-tool="color"><span>◉</span><div><strong>Color lab</strong><small>Paletas para UI</small></div><b>↗</b></button>
-            <button class="tool-card" data-tool="regex"><span>.*</span><div><strong>Regex tester</strong><small>Teste padrões</small></div><b>↗</b></button>
-            <button class="tool-card" data-tool="focus"><span>◷</span><div><strong>Focus run</strong><small>25 min para criar</small></div><b>↗</b></button>
-          </div>
-
-          <div class="pulse-card">
-            <div class="pulse-title"><span>DEV PULSE</span><b>AGORA</b></div>
-            <div class="pulse-items">
-              <button data-external="https://godotengine.org"><span>◆</span><div><strong>Novidades do Godot</strong><small>Veja as últimas atualizações do engine</small></div><b>↗</b></button>
-              <button data-external="https://itch.io/jams"><span>itch</span><div><strong>Game jams abertas</strong><small>Encontre seu próximo desafio</small></div><b>↗</b></button>
-            </div>
-          </div>
-        </section>
-
-        <section class="view" data-view-panel="projects">
-          <div class="page-heading"><span class="section-kicker">WORKSPACE</span><h1>Projetos</h1><p>Seus projetos ficam organizados aqui. Nesta versão web, novos projetos são salvos apenas neste navegador.</p></div>
-          <div class="project-grid" id="allProjects"></div>
-        </section>
-
-        <section class="view" data-view-panel="tools">
-          <div class="page-heading"><span class="section-kicker">KIT DE DESENVOLVIMENTO</span><h1>Ferramentas</h1><p>Utilidades rápidas para trabalhar sem sair do Happy Coding.</p></div>
-          <div class="tool-workbench">
-            <article><h3>{ } JSON tidy</h3><textarea id="jsonInput" placeholder='Cole JSON aqui...'>{"happy":true,"coding":"=]"}</textarea><div class="inline-actions"><button class="primary-btn" id="formatJson">Formatar</button><span id="jsonStatus"></span></div></article>
-            <article><h3>◉ Color lab</h3><label>Escolha uma cor <input type="color" id="colorPicker" value="#59c5ec"></label><div class="color-preview" id="colorPreview"><code id="colorValue">#59C5EC</code></div></article>
-            <article><h3>.* Regex tester</h3><input id="regexPattern" placeholder="Expressão regular" value="happy|coding"><textarea id="regexText">Happy Coding =] é um espaço para coding.</textarea><div class="inline-actions"><button class="primary-btn" id="testRegex">Testar</button><span id="regexStatus"></span></div></article>
-            <article><h3>◷ Focus run</h3><div class="focus-clock" id="focusClock">25:00</div><div class="inline-actions"><button class="primary-btn" id="focusStart">Iniciar</button><button class="secondary-btn" id="focusReset">Resetar</button></div></article>
-          </div>
-        </section>
-
-        <section class="view" data-view-panel="discover">
-          <div class="page-heading"><span class="section-kicker">DESCOBRIR</span><h1>Explore coisas novas</h1><p>Links úteis para criação. Pesquisas feitas pelo Happy Coding usam SafeSearch quando possível.</p></div>
-          <div class="discover-grid">
-            <button data-external="https://docs.godotengine.org"><b>◆ Godot Docs</b><span>Documentação oficial do Godot</span></button>
-            <button data-external="https://developer.mozilla.org"><b>MDN Web Docs</b><span>HTML, CSS e JavaScript</span></button>
-            <button data-external="https://itch.io/jams"><b>itch.io jams</b><span>Game jams e desafios</span></button>
-            <button data-external="https://github.com/explore"><b>GitHub Explore</b><span>Projetos e código aberto</span></button>
-          </div>
-        </section>
-
-        <section class="view" data-view-panel="settings">
-          <div class="page-heading"><span class="section-kicker">CONFIGURAÇÕES</span><h1>Ajustes</h1><p>Algumas proteções são parte do Happy Coding e não possuem botão para desativar.</p></div>
-          <div class="settings-list">
-            <article><div><strong>Filtro de conteúdo adulto</strong><small>Obrigatório em todas as contas.</small></div><span class="locked">🔒 Sempre ativo</span></article>
-            <article><div><strong>Busca segura</strong><small>SafeSearch aplicado às pesquisas iniciadas pelo Happy Coding.</small></div><span class="locked">🔒 Sempre ativo</span></article>
-            <article><div><strong>Histórico</strong><small>Nesta versão, fica somente neste navegador.</small></div><button class="secondary-btn" id="clearHistory">Limpar</button></article>
-            <article><div><strong>Favoritos</strong><small>Salvos localmente por enquanto; sincronização com conta vem depois.</small></div><span id="bookmarkCount">0 salvos</span></article>
-          </div>
-        </section>
-      </main>
+<div class="app-shell">
+  <header class="browser-chrome">
+    <div class="tabs-row">
+      <div class="tab active"><span class="tab-dot">=]</span><span>Happy Coding</span><button aria-label="Fechar aba">×</button></div>
+      <div class="tab"><span class="tab-dot godot-dot">◆</span><span>Godot Docs</span><button aria-label="Fechar aba">×</button></div>
+      <button class="tab-add" id="newTabBtn" title="Nova aba">+</button>
+      <div class="window-spacer"></div>
     </div>
+    <div class="nav-row">
+      <button class="nav-btn" id="backBtn" title="Voltar">←</button>
+      <button class="nav-btn" id="forwardBtn" title="Avançar">→</button>
+      <button class="nav-btn" id="reloadBtn" title="Atualizar">↻</button>
+      <form class="address-wrap" id="addressForm">
+        <span class="shield">◆</span>
+        <input id="addressInput" value="happy://home" aria-label="Pesquisar ou digitar endereço" autocomplete="off" spellcheck="false">
+        <kbd>⌘ K</kbd>
+      </form>
+      <button class="profile-chip" type="button"><span>VR</span><small>Perfil de Vinicius</small></button>
+      <button class="nav-btn" id="menuBtn" title="Menu">•••</button>
+      <button class="hidden" id="homeBtn" aria-hidden="true"></button>
+      <button class="hidden" id="bookmarkBtn" aria-hidden="true"></button>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <aside class="sidebar">
+      <div class="brand">happy coding <span>=]</span></div>
+      <p class="eyebrow">SEU ESPAÇO</p>
+      <nav>
+        <button class="side-link active" data-view="home"><span>⌂</span> Início</button>
+        <button class="side-link" data-view="projects"><span>▱</span> Projetos <b id="projectCount">3</b></button>
+        <button class="side-link" data-view="tools"><span>⌘</span> Ferramentas</button>
+        <button class="side-link" data-view="discover"><span>✦</span> Descobrir</button>
+      </nav>
+      <p class="eyebrow">PROJETOS RECENTES</p>
+      <div id="recentProjects" class="recent-projects"></div>
+      <div class="sidebar-bottom">
+        <button class="side-link" id="feedbackBtn"><span>?</span> Feedback</button>
+        <button class="side-link" data-view="settings"><span>⚙</span> Ajustes</button>
+      </div>
+    </aside>
+
+    <main class="main" id="mainView">
+      <section class="view active" data-view-panel="home">
+        <div class="topline"><span class="online"><i></i> WORKSPACE ONLINE</span></div>
+
+        <div class="hero original-hero">
+          <div>
+            <p class="greeting-line"><span id="greeting">Boa noite</span>, Vinicius</p>
+            <h1>O que vamos criar hoje? <span>✦</span></h1>
+          </div>
+          <div class="streak"><strong>⚡ <span id="streakDays">12</span></strong><small>dias criando direto</small></div>
+        </div>
+
+        <form class="universal-search" id="universalSearch">
+          <span>⌕</span><input id="searchInput" placeholder="Busca universal" autocomplete="off"><kbd>Ctrl K</kbd><button>Buscar ↗</button>
+        </form>
+
+        <div class="section-head original-section-head">
+          <div><span class="section-kicker">CONTINUE CRIANDO</span></div>
+          <button class="primary-btn" id="newProjectBtn">+ Novo projeto</button>
+        </div>
+        <div class="project-grid" id="projectGrid"></div>
+
+        <div class="section-head compact">
+          <div><h2>Ferramentas rápidas</h2></div>
+          <button class="text-btn" data-view-jump="tools">Ver todas</button>
+        </div>
+        <div class="tool-grid">
+          <button class="tool-card" data-tool="json"><span>{ }</span><div><strong>JSON tidy</strong><small>Formatar e validar</small></div><b>↗</b></button>
+          <button class="tool-card" data-tool="color"><span>◉</span><div><strong>Color lab</strong><small>Paletas para UI</small></div><b>↗</b></button>
+          <button class="tool-card" data-tool="regex"><span>.*</span><div><strong>Regex tester</strong><small>Teste padrões</small></div><b>↗</b></button>
+          <button class="tool-card" data-tool="focus"><span>◷</span><div><strong>Focus run</strong><small>25 min para criar</small></div><b>↗</b></button>
+        </div>
+
+        <div class="pulse-card">
+          <div class="pulse-title"><span>DEV PULSE</span><b>AGORA</b></div>
+          <div class="pulse-items">
+            <button data-external="https://godotengine.org"><span>◆</span><div><strong>Novidades do Godot</strong><small>Veja as últimas atualizações do engine</small></div><b>↗</b></button>
+            <button data-external="https://itch.io/jams"><span>itch</span><div><strong>Game jams abertas</strong><small>Encontre seu próximo desafio</small></div><b>↗</b></button>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" data-view-panel="projects">
+        <div class="page-heading"><span class="section-kicker">PROJETOS</span><h1>Seus projetos</h1></div>
+        <div class="project-grid" id="allProjects"></div>
+      </section>
+
+      <section class="view" data-view-panel="tools">
+        <div class="page-heading"><span class="section-kicker">FERRAMENTAS</span><h1>Ferramentas rápidas</h1></div>
+        <div class="tool-workbench">
+          <article><h3>{ } JSON tidy</h3><textarea id="jsonInput">{"happy":true,"coding":"=]"}</textarea><div class="inline-actions"><button class="primary-btn" id="formatJson">Formatar</button><span id="jsonStatus"></span></div></article>
+          <article><h3>◉ Color lab</h3><label>Escolha uma cor <input type="color" id="colorPicker" value="#59c5ec"></label><div class="color-preview" id="colorPreview"><code id="colorValue">#59C5EC</code></div></article>
+          <article><h3>.* Regex tester</h3><input id="regexPattern" value="happy|coding"><textarea id="regexText">Happy Coding =] é um espaço para coding.</textarea><div class="inline-actions"><button class="primary-btn" id="testRegex">Testar</button><span id="regexStatus"></span></div></article>
+          <article><h3>◷ Focus run</h3><div class="focus-clock" id="focusClock">25:00</div><div class="inline-actions"><button class="primary-btn" id="focusStart">Iniciar</button><button class="secondary-btn" id="focusReset">Resetar</button></div></article>
+        </div>
+      </section>
+
+      <section class="view" data-view-panel="discover">
+        <div class="page-heading"><span class="section-kicker">DESCOBRIR</span><h1>Descobrir</h1></div>
+        <div class="discover-grid">
+          <button data-external="https://docs.godotengine.org"><b>◆ Godot Docs</b><span>Documentação oficial do Godot</span></button>
+          <button data-external="https://developer.mozilla.org"><b>MDN Web Docs</b><span>HTML, CSS e JavaScript</span></button>
+          <button data-external="https://itch.io/jams"><b>itch.io jams</b><span>Game jams e desafios</span></button>
+          <button data-external="https://github.com/explore"><b>GitHub Explore</b><span>Projetos e código aberto</span></button>
+        </div>
+      </section>
+
+      <section class="view" data-view-panel="settings">
+        <div class="page-heading"><span class="section-kicker">AJUSTES</span><h1>Ajustes</h1></div>
+        <div class="settings-list">
+          <article><div><strong>Filtro de conteúdo adulto</strong><small>Obrigatório em todas as contas.</small></div><span class="locked">🔒 Sempre ativo</span></article>
+          <article><div><strong>Busca segura</strong><small>Proteção aplicada às pesquisas iniciadas pelo Happy Coding.</small></div><span class="locked">🔒 Sempre ativo</span></article>
+          <article><div><strong>Histórico</strong><small>Fica apenas neste navegador.</small></div><button class="secondary-btn" id="clearHistory">Limpar</button></article>
+          <article><div><strong>Favoritos</strong><small>Salvos localmente por enquanto.</small></div><span id="bookmarkCount">0 salvos</span></article>
+        </div>
+      </section>
+    </main>
   </div>
+</div>
 
-  <button class="mascot-button" id="mascotBtn" aria-label="Conversar com o mascote">=]</button>
-  <aside class="mascot-panel hidden" id="mascotPanel">
-    <div class="mascot-head"><div><span>=]</span><div><strong>Happy</strong><small>assistente em desenvolvimento</small></div></div><button id="closeMascot">×</button></div>
-    <div class="chat-log" id="chatLog"><p class="bot">Ei! Pronto pra criar algo incrível? =]</p></div>
-    <form id="chatForm"><input id="chatInput" placeholder="Fale com o mascote..." autocomplete="off"><button>↑</button></form>
-  </aside>
+<button class="mascot-button" id="mascotBtn" aria-label="Conversar com o mascote">=]</button>
+<aside class="mascot-panel hidden" id="mascotPanel">
+  <div class="mascot-head"><div><span>=]</span><div><strong>Happy Coding =]</strong><small>mascote</small></div></div><button id="closeMascot">×</button></div>
+  <div class="chat-log" id="chatLog"><p class="bot">Ei! Pronto pra criar algo incrível?</p></div>
+  <form id="chatForm"><input id="chatInput" placeholder="Conversar com o mascote..." autocomplete="off"><button>↑</button></form>
+</aside>
 
-  <aside class="menu-panel hidden" id="menuPanel">
-    <div class="menu-head"><strong>Happy Coding =]</strong><button id="closeMenu">×</button></div>
-    <button id="menuBookmarks">☆ Favoritos <span id="menuBookmarkCount">0</span></button>
-    <button id="menuHistory">◷ Histórico local</button>
-    <button data-view-jump="settings">⚙ Ajustes</button>
-    <a href="https://happy-coding-dev.viniciuscontrole.chatgpt.site" target="_blank" rel="noopener">↗ Abrir protótipo anterior</a>
-    <p>Proteção obrigatória ativa. O filtro web é uma camada inicial e ainda será reforçado antes de um lançamento público.</p>
-  </aside>
+<aside class="menu-panel hidden" id="menuPanel">
+  <div class="menu-head"><strong>Menu</strong><button id="closeMenu">×</button></div>
+  <button id="menuBookmarks">☆ Favoritos <span id="menuBookmarkCount">0</span></button>
+  <button id="menuHistory">◷ Histórico local</button>
+  <button data-view-jump="settings">⚙ Ajustes</button>
+</aside>
 
-  <div class="modal hidden" id="projectModal">
-    <div class="modal-card"><button class="modal-x" data-close-modal="projectModal">×</button><span class="section-kicker">NOVO PROJETO</span><h2>Começar algo novo</h2><form id="projectForm"><label>Nome<input id="projectName" required maxlength="48" placeholder="Meu projeto"></label><label>Tecnologia<select id="projectEngine"><option>Godot 4 · GDScript</option><option>Web · JavaScript</option><option>Phaser · TypeScript</option><option>Unity · C#</option><option>Python</option></select></label><label>Descrição<input id="projectDescription" maxlength="90" placeholder="O que você vai criar?"></label><button class="primary-btn">Criar projeto</button></form></div>
-  </div>
-
-  <div class="modal hidden" id="warningModal">
-    <div class="modal-card warning-card"><span class="warning-pill">AVISO DE CONTEÚDO</span><h2>Este link pode conter violência, terror ou linguagem forte.</h2><p>Conteúdo fictício desse tipo pode ser acessado, mas o Happy Coding mostra um aviso antes de continuar.</p><div class="modal-actions"><button class="secondary-btn" id="warningCancel">Voltar</button><button class="primary-btn" id="warningContinue">Continuar</button></div></div>
-  </div>
-
-  <div class="modal hidden" id="blockedModal">
-    <div class="modal-card blocked-card"><span class="blocked-icon">◆</span><h2>Pesquisa bloqueada</h2><p>O filtro obrigatório do Happy Coding impediu esta pesquisa porque ela parece buscar conteúdo adulto explícito.</p><button class="primary-btn" data-close-modal="blockedModal">Entendi</button></div>
-  </div>
-
-  <div class="toast hidden" id="toast"></div>
-  <script src="app.js"></script>
+<div class="modal hidden" id="projectModal"><div class="modal-card"><button class="modal-x" data-close-modal="projectModal">×</button><span class="section-kicker">NOVO PROJETO</span><h2>Começar algo novo</h2><form id="projectForm"><label>Nome<input id="projectName" required maxlength="48" placeholder="Meu projeto"></label><label>Tecnologia<select id="projectEngine"><option>Godot 4 · GDScript</option><option>Web · JavaScript</option><option>Phaser · TypeScript</option><option>Unity · C#</option><option>Python</option></select></label><label>Descrição<input id="projectDescription" maxlength="90" placeholder="O que você vai criar?"></label><button class="primary-btn">Criar projeto</button></form></div></div>
+<div class="modal hidden" id="warningModal"><div class="modal-card warning-card"><span class="warning-pill">AVISO DE CONTEÚDO</span><h2>Este link pode conter violência, terror ou linguagem forte.</h2><p>Conteúdo fictício desse tipo pode ser acessado, mas o Happy Coding mostra um aviso antes de continuar.</p><div class="modal-actions"><button class="secondary-btn" id="warningCancel">Voltar</button><button class="primary-btn" id="warningContinue">Continuar</button></div></div></div>
+<div class="modal hidden" id="blockedModal"><div class="modal-card blocked-card"><span class="blocked-icon">◆</span><h2>Pesquisa bloqueada</h2><p>O filtro obrigatório do Happy Coding impediu esta pesquisa porque ela parece buscar conteúdo adulto explícito.</p><button class="primary-btn" data-close-modal="blockedModal">Entendi</button></div></div>
+<div class="toast hidden" id="toast"></div>
+<script src="app.js"></script>
 </body>
 </html>
