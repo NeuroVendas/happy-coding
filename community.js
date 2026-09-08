@@ -3,6 +3,9 @@ const URL_BASE = 'https://vzfnoaixjgyifutklpwn.supabase.co';
 // Public client key only. Authorization is enforced by database policies.
 const PUBLIC_KEY = 'sb_publishable_nQTrMmVzLt0b1t0y-Ob22g_UwF1eNDD';
 const SITE_URL = 'https://neurovendas.github.io/happy-coding/';
+const AUTH_KEY = 'happyCoding.community.auth.v1';
+const legacySession=sessionStorage.getItem(AUTH_KEY);
+if(!localStorage.getItem(AUTH_KEY)&&legacySession)localStorage.setItem(AUTH_KEY,legacySession);
 let clientPromise, user = null, moderator = false, reviewing = false, page = 0, requestVersion = 0;
 const PAGE_SIZE = 20;
 const kinds = {discussion:'Conversa',code:'Código',project:'Projeto'};
@@ -30,7 +33,7 @@ function message(error) {
 async function client() {
   if(!clientPromise) clientPromise = (async()=>{
     const {createClient} = await import('https://esm.sh/@supabase/supabase-js@2.116.0');
-    const db = createClient(URL_BASE,PUBLIC_KEY,{auth:{storage:sessionStorage,storageKey:'happyCoding.community.auth.v1',detectSessionInUrl:true}});
+    const db = createClient(URL_BASE,PUBLIC_KEY,{auth:{storage:localStorage,storageKey:AUTH_KEY,persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
     db.auth.onAuthStateChange((event,session)=>{
       user=session?.user||null;
       if(event==='SIGNED_OUT'){$('communityFeed').replaceChildren();moderator=false;reviewing=false;}
@@ -114,9 +117,9 @@ async function accountDialog() {
   let db;try{db=await client();}catch(error){status.textContent=message(error);return;}
   status.remove();if(!d.isConnected)return;
   if(user){
-    d.append(element('p','',`Conectado como ${user.email}. A sessão fica nesta aba.`));
+    d.append(element('p','',`Conectado como ${user.email}. A sessão permanece neste navegador até você sair da conta.`));
     const id=element('p','community-account-id','ID da sua conta: ');id.append(element('code','',user.id));d.append(id);
-    d.append(button('Sair da conta',async()=>{const {error}=await db.auth.signOut({scope:'local'});if(error){window.toast(message(error));return;}d.close();}));
+    d.append(button('Sair da conta',async()=>{const {error}=await db.auth.signOut({scope:'local'});if(error){window.toast(message(error));return;}sessionStorage.removeItem(AUTH_KEY);d.close();}));
     const details=element('details'),summary=element('summary','','Proteção em duas etapas');details.append(summary,element('p','','Use um aplicativo autenticador. A revisão de posts exige conta autorizada e verificação em duas etapas.'));
     details.append(button('Configurar / verificar',async event=>{event.target.disabled=true;try{await mfaDialog(db);}catch(error){window.toast(message(error));}finally{event.target.disabled=false;}}));d.append(details);return;
   }
