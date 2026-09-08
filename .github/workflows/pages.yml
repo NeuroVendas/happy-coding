@@ -26,6 +26,7 @@ jobs:
       - name: Check JavaScript syntax
         run: |
           node --check app.js
+          node --check browser-controls.js
           node --check community.js
           node --check safety-ui.js
           node --check account-sync.js
