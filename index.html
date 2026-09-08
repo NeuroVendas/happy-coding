@@ -117,7 +117,6 @@
 <div class="modal hidden" id="profileModal"><div class="modal-card"><button class="modal-x" data-close-modal="profileModal">×</button><span class="section-kicker">PERFIL LOCAL</span><h2>Como quer aparecer?</h2><p class="modal-copy">Por enquanto esse perfil fica apenas neste dispositivo. Depois ele poderá sincronizar com sua conta.</p><form id="profileForm"><label>Nome<input id="profileName" maxlength="32" placeholder="Seu nome"></label><button class="primary-btn">Salvar perfil</button></form></div></div>
 
 <div class="modal hidden" id="projectModal"><div class="modal-card"><button class="modal-x" data-close-modal="projectModal">×</button><span class="section-kicker">NOVO PROJETO</span><h2>Começar algo novo</h2><form id="projectForm"><label>Nome<input id="projectName" required maxlength="48" placeholder="Meu projeto"></label><label>Tecnologia<select id="projectEngine"><option>Godot 4 · GDScript</option><option>Web · JavaScript</option><option>Phaser · TypeScript</option><option>Unity · C#</option><option>Python</option></select></label><label>Descrição<input id="projectDescription" maxlength="90" placeholder="O que você vai criar?"></label><button class="primary-btn">Criar projeto</button></form></div></div>
-
 <div class="modal hidden" id="projectWorkspaceModal"><div class="modal-card workspace-modal"><button class="modal-x" data-close-modal="projectWorkspaceModal">×</button><span class="section-kicker" id="workspaceEngine">PROJETO</span><h2 id="workspaceName">Projeto</h2><p class="modal-copy" id="workspaceDescription"></p><label class="workspace-notes-label">Notas do projeto<textarea id="workspaceNotes" placeholder="Ideias, tarefas, bugs, próximos passos..."></textarea></label><div class="modal-actions"><button class="secondary-btn" id="workspaceDelete">Excluir projeto</button><button class="primary-btn" id="workspaceSave">Salvar notas</button></div></div></div>
 
 <div class="modal hidden" id="warningModal"><div class="modal-card warning-card"><span class="warning-pill">AVISO DE CONTEÚDO</span><h2>Este link pode conter violência, terror ou linguagem forte.</h2><p>Conteúdo fictício desse tipo pode ser acessado, mas o Happy Coding mostra um aviso antes de continuar.</p><div class="modal-actions"><button class="secondary-btn" id="warningCancel">Voltar</button><button class="primary-btn" id="warningContinue">Continuar</button></div></div></div>
@@ -126,5 +125,6 @@
 <nav class="mobile-nav" aria-label="Navegação principal"><button data-view="home">⌂ Início</button><button data-view="projects">▱ Projetos</button><button data-view="tools">⌘ Tools</button><button data-view="community">◎ Comunidade</button><button data-view="settings">⚙ Ajustes</button></nav>
 <script src="app.js"></script>
 <script type="module" src="community.js"></script>
+<script type="module" src="safety-ui.js"></script>
 </body>
 </html>
