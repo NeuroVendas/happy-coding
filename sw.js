@@ -3,11 +3,11 @@
 // Bump the version whenever an offline shell file changes.
 const SCOPE = new URL(self.registration.scope);
 const CACHE_PREFIX = `happy-coding:${SCOPE.href}:`;
-const CACHE = `${CACHE_PREFIX}v11`;
+const CACHE = `${CACHE_PREFIX}v12`;
 const CORE = [
   './', './index.html', './styles.css', './original-overrides.css',
   './accessibility-pwa.css', './sync-hook.js', './app.js', './ai-local.js',
-  './account-sync.js', './account-entry.js', './public-feed.js',
+  './account-sync.js', './account-entry.js', './public-feed.js', './browser-controls.js',
   './manifest.webmanifest', './icon.svg', './restored-theme.css',
   './community.css', './community.js', './safety-ui.js',
   './privacy.html', './community-guidelines.html'
