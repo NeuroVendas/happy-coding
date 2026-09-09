@@ -31,7 +31,7 @@ function worker() {
           if (state.installError) throw Error('precache failed');
           for (const request of requests) entries.set(key(request), new Response(key(request)));
         },
-        match: async request => entries.get(key(request)?.clone ? key(request) : key(request))?.clone()
+        match: async request => entries.get(key(request))?.clone()
       };
     }
   };
