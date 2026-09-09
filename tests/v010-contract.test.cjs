@@ -18,6 +18,11 @@ const apiLimitSql=read('backend/global-ai-rate-limit-v010.sql');
 const desktopLock=JSON.parse(read('desktop/package-lock.json'));
 const previewWorkflow=read('.github/workflows/desktop-preview.yml');
 const releaseWorkflow=read('.github/workflows/desktop-windows.yml');
+const dependabot=read('.github/dependabot.yml');
+
+const CHECKOUT_SHA='11d5960a326750d5838078e36cf38b85af677262';
+const SETUP_NODE_SHA='49933ea5288caeca8642d1e84afbd3f7d6820020';
+const UPLOAD_SHA='ea165f8d65b6e75b540449e92b4886f43607fa02';
 
 test('v0.10 bootstrap loads replacement behavior before legacy app handlers',()=>{
   for(const file of ['search-v010.js','cloud-ai.js','v010-cleanup.js','community-v010.js'])assert.ok(sync.includes(file),file);
@@ -99,6 +104,34 @@ test('desktop dependency graph is locked and both Windows workflows use npm ci',
     assert.equal(/npm install --no-audit --no-fund/.test(workflow),false);
   }
   assert.match(previewWorkflow,/permissions:\s*\n\s*contents:\s*read/);
+});
+
+test('Windows CI pins third-party Actions and enforces dependency audits',()=>{
+  for(const workflow of [previewWorkflow,releaseWorkflow]){
+    assert.ok(workflow.includes(`actions/checkout@${CHECKOUT_SHA}`));
+    assert.ok(workflow.includes(`actions/setup-node@${SETUP_NODE_SHA}`));
+    assert.ok(workflow.includes(`actions/upload-artifact@${UPLOAD_SHA}`));
+    assert.equal(/actions\/checkout@v4/.test(workflow),false);
+    assert.equal(/actions\/setup-node@v4/.test(workflow),false);
+    assert.equal(/actions\/upload-artifact@v4/.test(workflow),false);
+    assert.ok(workflow.includes('npm audit --omit=dev --audit-level=high'));
+    assert.ok(workflow.includes('npm audit --audit-level=critical'));
+  }
+});
+
+test('preview CI verifies the packaged browser survives startup',()=>{
+  assert.ok(previewWorkflow.includes('Smoke packaged browser startup'));
+  assert.ok(previewWorkflow.includes("-Filter 'HappyCoding.exe'"));
+  assert.ok(previewWorkflow.includes('Start-Process -FilePath $exe.FullName'));
+  assert.ok(previewWorkflow.includes('Start-Sleep -Seconds 8'));
+  assert.ok(previewWorkflow.includes('if ($process.HasExited)'));
+});
+
+test('Dependabot watches desktop npm and GitHub Actions weekly',()=>{
+  assert.match(dependabot,/package-ecosystem:\s*npm/);
+  assert.match(dependabot,/directory:\s*\/desktop/);
+  assert.match(dependabot,/package-ecosystem:\s*github-actions/);
+  assert.equal((dependabot.match(/interval:\s*weekly/g)||[]).length,2);
 });
 
 test('legacy v0.0.1 example projects are removed from the visible experience',()=>{
