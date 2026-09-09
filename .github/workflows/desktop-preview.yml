@@ -17,8 +17,8 @@ jobs:
   preview-windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
       - name: Check web JavaScript
@@ -60,6 +60,12 @@ jobs:
       - name: Install locked desktop dependencies
         working-directory: desktop
         run: npm ci --no-audit --no-fund
+      - name: Audit production dependencies
+        working-directory: desktop
+        run: npm audit --omit=dev --audit-level=high
+      - name: Reject critical vulnerabilities anywhere in the dependency tree
+        working-directory: desktop
+        run: npm audit --audit-level=critical
       - name: Check desktop JavaScript
         working-directory: desktop
         run: npm run check
@@ -82,7 +88,7 @@ jobs:
           }
           Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
           Write-Host 'Packaged Happy Coding stayed alive through startup smoke.'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: Happy-Coding-0.10.0-preview
           path: desktop/out/make/**/*
