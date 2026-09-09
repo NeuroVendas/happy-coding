@@ -62,5 +62,18 @@ class GitHubConnection{
     if(!Array.isArray(data))throw new Error('Resposta inesperada do GitHub.');
     return data.filter(p=>!p.private).map(p=>({name:String(p.full_name||'').slice(0,200),url:String(p.html_url||'').slice(0,500),description:String(p.description||'').slice(0,200)}));
   }
+  async issues(repositoryUrl){
+    const match=String(repositoryUrl||'').trim().match(/^https:\/\/github\.com\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)\/?$/);
+    if(!match)throw new Error('Vincule um repositório GitHub válido primeiro.');
+    const owner=encodeURIComponent(match[1]),repo=encodeURIComponent(match[2]);
+    const data=await this.api(`/repos/${owner}/${repo}/issues?state=open&sort=updated&direction=desc&per_page=15`);
+    if(!Array.isArray(data))throw new Error('Resposta inesperada do GitHub.');
+    return data.filter(item=>!item.pull_request).slice(0,10).map(item=>({
+      number:Math.max(0,Number(item.number)||0),
+      title:String(item.title||'Issue').slice(0,240),
+      url:String(item.html_url||'').slice(0,500),
+      labels:Array.isArray(item.labels)?item.labels.map(label=>String(typeof label==='string'?label:label?.name||'').slice(0,60)).filter(Boolean).slice(0,5):[]
+    }));
+  }
 }
 module.exports={GitHubConnection};

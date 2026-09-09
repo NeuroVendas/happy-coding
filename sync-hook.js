@@ -30,4 +30,16 @@
     originalRemove.call(this,key);
     emit(this,key);
   };
+
+  // v0.10 loads before app.js so its capture-phase search and cloud-AI handlers
+  // can replace the old local-model/search behavior without exposing native APIs.
+  if(!document.querySelector('link[data-hc-v010]')){
+    const css=document.createElement('link');css.rel='stylesheet';css.href='v010.css';css.dataset.hcV010='1';document.head.append(css);
+  }
+  if(document.readyState==='loading'){
+    document.write('<script src="search-v010.js"><\/script>');
+    document.write('<script src="cloud-ai.js"><\/script>');
+    document.write('<script src="v010-cleanup.js"><\/script>');
+    document.write('<script type="module" src="community-v010.js"><\/script>');
+  }
 })();

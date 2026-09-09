@@ -1,10 +1,13 @@
 'use strict';
+const {resolve}=require('node:path');
+const icon=resolve(__dirname,'assets','happy-coding.ico');
 
 module.exports={
   packagerConfig:{
     asar:true,
     name:'Happy Coding',
-    executableName:'HappyCoding'
+    executableName:'HappyCoding',
+    icon
   },
   rebuildConfig:{},
   makers:[
@@ -15,6 +18,7 @@ module.exports={
         authors:'Happy Coding',
         description:'Happy Coding =] desktop browser',
         setupExe:'HappyCoding-Setup.exe',
+        setupIcon:icon,
         noMsi:true
       }
     },

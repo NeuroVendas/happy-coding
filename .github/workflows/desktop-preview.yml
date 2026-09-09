@@ -3,31 +3,126 @@ on:
   pull_request:
     paths:
       - 'desktop/**'
+      - '*.js'
+      - '*.css'
+      - '*.html'
+      - '*.svg'
+      - 'tests/**'
+      - 'backend/**'
+      - 'edge-functions/**'
+      - 'supabase/**'
       - '.github/workflows/desktop-preview.yml'
 permissions:
   contents: read
 jobs:
   preview-windows:
     runs-on: windows-latest
-    defaults:
-      run:
-        working-directory: desktop
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
-      - name: Check JavaScript
+      - name: Check web JavaScript
+        shell: pwsh
+        run: |
+          $files = @('app.js','sync-hook.js','search-v010.js','cloud-ai.js','v010-cleanup.js','community-v010.js','community.js','safety-ui.js','browser-controls.js')
+          foreach ($file in $files) { node --check $file; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } }
+      - name: Run web shell tests
+        run: node --test tests/*.test.cjs
+      - name: Smoke cloud AI and search answer chain
+        if: github.event.pull_request.number == 4
+        shell: pwsh
+        run: |
+          $cloud = Get-Content 'cloud-ai.js' -Raw
+          if ($cloud -notmatch "const ENDPOINT='([^']+)'" ) { throw 'Could not read cloud AI endpoint' }
+          $aiEndpoint = $Matches[1]
+          if ($cloud -notmatch "const KEY='([^']+)'" ) { throw 'Could not read publishable key' }
+          $key = $Matches[1]
+          $headers = @{ Origin = 'https://neurovendas.github.io'; apikey = $key }
+          $chatBody = @{ mode = 'chat'; prompt = 'Responda apenas com OK =]' } | ConvertTo-Json
+          $chat = Invoke-RestMethod -Method Post -Uri $aiEndpoint -Headers $headers -ContentType 'application/json' -Body $chatBody -TimeoutSec 30
+          if (-not $chat.reply) { throw 'ai-chat returned no reply' }
+          if ($chat.safety -eq $true) { throw 'ai-chat smoke was unexpectedly safety-blocked' }
+          Write-Host "Cloud AI smoke OK using model $($chat.model)"
+          $searchEndpoint = $aiEndpoint -replace '/ai-chat$','/web-search'
+          $searchBody = @{ q = 'Godot Engine official documentation' } | ConvertTo-Json
+          $search = Invoke-RestMethod -Method Post -Uri $searchEndpoint -Headers $headers -ContentType 'application/json' -Body $searchBody -TimeoutSec 30
+          if (-not $search.results -or $search.results.Count -lt 1) { throw 'web-search returned no results' }
+          Write-Host "Search smoke OK with $($search.results.Count) result(s)"
+          $sources = @($search.results | Select-Object -First 6)
+          $answerBody = @{ mode = 'search'; prompt = 'What is Godot Engine?'; sources = $sources } | ConvertTo-Json -Depth 6
+          $answer = Invoke-RestMethod -Method Post -Uri $aiEndpoint -Headers $headers -ContentType 'application/json' -Body $answerBody -TimeoutSec 30
+          if (-not $answer.reply) { throw 'search-mode AI returned no answer' }
+          if ($answer.safety -eq $true) { throw 'search-mode AI was unexpectedly safety-blocked' }
+          Write-Host "Search-to-AI smoke OK using model $($answer.model)"
+      - name: Smoke isolated v0.10 web stage
+        if: github.event.pull_request.number == 4
+        shell: pwsh
+        run: |
+          $base = 'https://neurovendas.github.io/happy-coding/preview-v010/'
+          $page = Invoke-WebRequest -Uri $base -UseBasicParsing -TimeoutSec 30
+          if ($page.StatusCode -ne 200) { throw "v0.10 preview page returned HTTP $($page.StatusCode)" }
+          $html = [string]$page.Content
+          foreach ($marker in @('Happy Coding =]','sync-hook.js','community.js','safety-ui.js')) {
+            if (-not $html.Contains($marker)) { throw "v0.10 preview page is missing marker: $marker" }
+          }
+          $sync = Invoke-WebRequest -Uri "${base}sync-hook.js" -UseBasicParsing -TimeoutSec 30
+          if ($sync.StatusCode -ne 200) { throw "v0.10 sync hook returned HTTP $($sync.StatusCode)" }
+          $syncText = [string]$sync.Content
+          foreach ($marker in @('search-v010.js','cloud-ai.js','v010-cleanup.js','community-v010.js')) {
+            if (-not $syncText.Contains($marker)) { throw "deployed v0.10 sync hook is missing marker: $marker" }
+          }
+          $icon = Invoke-WebRequest -Uri "${base}icon.svg" -UseBasicParsing -TimeoutSec 30
+          if (-not ([string]$icon.Content).Contains('#b7f34a')) { throw 'deployed v0.10 icon is not the green Happy Coding identity' }
+          Write-Host 'Isolated v0.10 web stage is live and contains the expected modules.'
+      - name: Install locked desktop dependencies
+        working-directory: desktop
+        run: npm ci --no-audit --no-fund
+      - name: Audit production dependencies
+        working-directory: desktop
+        run: npm audit --omit=dev --audit-level=high
+      - name: Reject critical vulnerabilities anywhere in the dependency tree
+        working-directory: desktop
+        run: npm audit --audit-level=critical
+      - name: Show hardened build dependency versions
+        working-directory: desktop
+        shell: pwsh
+        run: npm ls @electron/packager tar tmp --all
+      - name: Check desktop JavaScript
+        working-directory: desktop
         run: npm run check
       - name: Run desktop tests
+        working-directory: desktop
         run: npm test
+      - name: Point preview build at isolated v0.10 web stage
+        working-directory: desktop
+        shell: pwsh
+        run: |
+          $path = 'browser-core.js'
+          $source = Get-Content $path -Raw
+          $stable = "const HOME='https://neurovendas.github.io/happy-coding/';"
+          $preview = "const HOME='https://neurovendas.github.io/happy-coding/preview-v010/';"
+          if (-not $source.Contains($stable)) { throw 'Stable HOME constant was not found; refusing preview rewrite.' }
+          Set-Content -Path $path -Value $source.Replace($stable,$preview) -NoNewline
+          $check = Get-Content $path -Raw
+          if (-not $check.Contains($preview)) { throw 'Preview HOME rewrite failed.' }
       - name: Package Windows preview
+        working-directory: desktop
         run: npm run make:win
-      - uses: actions/upload-artifact@v4
+      - name: Smoke packaged browser startup
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Path 'desktop/out' -Filter 'HappyCoding.exe' -File -Recurse | Select-Object -First 1
+          if (-not $exe) { throw 'Packaged HappyCoding.exe was not found.' }
+          Write-Host "Starting packaged browser: $($exe.FullName)"
+          $process = Start-Process -FilePath $exe.FullName -ArgumentList '--disable-gpu' -PassThru
+          Start-Sleep -Seconds 8
+          if ($process.HasExited) { throw "Packaged Happy Coding exited during startup smoke. Exit code: $($process.ExitCode)" }
+          Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+          Write-Host 'Packaged Happy Coding stayed alive through startup smoke.'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: Happy-Coding-0.9.1-preview
+          name: Happy-Coding-0.10.0-preview
           path: desktop/out/make/**/*
           if-no-files-found: error
           retention-days: 7

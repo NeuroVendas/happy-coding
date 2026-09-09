@@ -23,13 +23,19 @@ jobs:
         working-directory: desktop
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
-      - name: Install desktop dependencies
-        run: npm install --no-audit --no-fund
+      - name: Install locked desktop dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+      - name: Reject critical vulnerabilities anywhere in the dependency tree
+        run: npm audit --audit-level=critical
+      - name: Show hardened build dependency versions
+        run: npm ls @electron/packager tar tmp --all
       - name: Check desktop JavaScript
         run: npm run check
       - name: Test desktop core
@@ -43,6 +49,18 @@ jobs:
           Write-Host "Building Happy Coding v$version"
       - name: Build Windows x64 distributables
         run: npm run make:win
+      - name: Smoke packaged browser startup before release
+        shell: powershell
+        working-directory: .
+        run: |
+          $exe = Get-ChildItem -Path 'desktop/out' -Filter 'HappyCoding.exe' -File -Recurse | Select-Object -First 1
+          if (-not $exe) { throw 'Packaged HappyCoding.exe was not found.' }
+          Write-Host "Starting packaged browser: $($exe.FullName)"
+          $process = Start-Process -FilePath $exe.FullName -ArgumentList '--disable-gpu' -PassThru
+          Start-Sleep -Seconds 8
+          if ($process.HasExited) { throw "Packaged Happy Coding exited during startup smoke. Exit code: $($process.ExitCode)" }
+          Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+          Write-Host 'Packaged Happy Coding stayed alive through startup smoke.'
       - name: List distributables
         shell: powershell
         run: Get-ChildItem -Path out\make -Recurse -File | Select-Object FullName,Length
@@ -87,7 +105,7 @@ jobs:
             --generate-notes
           if ($LASTEXITCODE -ne 0) { throw "GitHub Release publish failed" }
       - name: Upload Windows build
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: Happy-Coding-Windows-v${{ env.APP_VERSION }}
           path: desktop/out/make/**/*

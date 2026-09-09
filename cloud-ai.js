@@ -1,0 +1,22 @@
+'use strict';
+(()=>{
+  const ENDPOINT='https://vzfnoaixjgyifutklpwn.supabase.co/functions/v1/ai-chat';
+  const KEY='sb_publishable_nQTrMmVzLt0b1t0y-Ob22g_UwF1eNDD';
+  const PROJECTS_KEY='happyCoding.projects.v1';
+  const NOTES_KEY='happyCoding.projectNotes.v1';
+  const CONTEXT_KEY='happyCoding.aiProjectContext.v1';
+  const $=id=>document.getElementById(id);
+  let history=[];
+  let sending=false;
+  function readJson(key,fallback){try{return JSON.parse(localStorage.getItem(key))??fallback;}catch{return fallback;}}
+  function append(role,text){const p=document.createElement('p');p.className=role==='user'?'user':'bot';p.textContent=text;$('chatLog')?.append(p);if($('chatLog'))$('chatLog').scrollTop=$('chatLog').scrollHeight;return p;}
+  function projects(){return readJson(PROJECTS_KEY,[]);}
+  function selectedProject(){const id=localStorage.getItem(CONTEXT_KEY);if(!id)return null;const project=projects().find(p=>p.id===id);if(!project){localStorage.removeItem(CONTEXT_KEY);return null;}const notes=readJson(NOTES_KEY,{})[id]||'';return{name:String(project.name||'Projeto').slice(0,120),engine:String(project.engine||'').slice(0,120),description:String(project.description||'').slice(0,600),notes:String(notes).slice(0,2500)};}
+  function contextCommand(text){const clean=text.trim();if(/^\/sem-projeto$/i.test(clean)){localStorage.removeItem(CONTEXT_KEY);return'Contexto de projeto removido. A IA não usará projeto nenhum até você escolher outro. =]';}if(/^\/contexto$/i.test(clean)){const p=selectedProject();return p?`Contexto atual: ${p.name} · ${p.engine||'sem tecnologia definida'}. Só envio as informações que você salvou no Happy Coding.`:'Nenhum projeto está compartilhado com a IA agora. Use /projeto Nome para escolher um.';}const match=clean.match(/^\/projeto(?:\s+(.+))?$/i);if(!match)return null;const list=projects();if(!match[1])return list.length?`Projetos disponíveis: ${list.map(p=>p.name).join(', ')}. Use /projeto Nome.`:'Você ainda não criou um projeto. Crie um em Projetos e depois use /projeto Nome.';const wanted=match[1].trim().toLowerCase();const exact=list.find(p=>String(p.name).toLowerCase()===wanted);const partial=list.filter(p=>String(p.name).toLowerCase().includes(wanted));const p=exact||(partial.length===1?partial[0]:null);if(!p)return partial.length>1?`Encontrei mais de um projeto parecido: ${partial.map(x=>x.name).join(', ')}.`:'Não encontrei esse projeto. Use /projeto para ver os nomes.';localStorage.setItem(CONTEXT_KEY,p.id);return`Projeto “${p.name}” escolhido como contexto. Só nome, tecnologia, descrição e notas serão enviados — nenhum arquivo é lido automaticamente. =]`;}
+  async function ask(text){const command=contextCommand(text);if(command)return command;const response=await fetch(ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','apikey':KEY},body:JSON.stringify({mode:'chat',prompt:text,history:history.slice(-8),context:selectedProject()})});const data=await response.json().catch(()=>({}));if(!response.ok){if(data?.error==='ai_not_configured')throw new Error('A IA em nuvem ainda está sendo conectada no servidor.');if(response.status===429)throw new Error('Muitas mensagens em pouco tempo. Aguarde um minuto e tente de novo.');throw new Error(data?.message||'A IA não respondeu agora.');}return String(data?.reply||'Não consegui gerar uma resposta agora.').slice(0,6000);}
+  function activateCloudUI(){const activate=$('aiActivate');if(activate)activate.classList.add('hidden');const status=$('aiStatus');if(status)status.textContent='IA em nuvem';const log=$('chatLog');if(log&&log.children.length===1&&log.firstElementChild?.classList.contains('bot'))log.firstElementChild.textContent='Ei! Sou o =]. Agora a IA roda na nuvem — sem baixar modelo pesado. Posso ajudar com código, debugging, Godot, GitHub e seus projetos.';}
+  activateCloudUI();
+  const form=$('chatForm'),input=$('chatInput');if(!form||!input)return;
+  form.addEventListener('submit',async event=>{event.preventDefault();event.stopImmediatePropagation();if(sending)return;const text=input.value.trim();if(!text)return;append('user',text);input.value='';sending=true;const thinking=append('bot','Pensando… =]');try{const reply=await ask(text);thinking.textContent=reply;history.push({role:'user',content:text},{role:'assistant',content:reply});history=history.slice(-12);}catch(error){thinking.textContent=error?.message||'Tive um erro ao responder. Tente novamente =]';}finally{sending=false;}},true);
+  window.happyCloudAI={selectedProject};
+})();
