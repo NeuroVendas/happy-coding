@@ -78,6 +78,15 @@ test('AI quota protection is global, backend-only and stores only a keyed hash',
   assert.ok(apiLimitSql.includes("set search_path=''"));
 });
 
+test('public search uses the same backend-only global quota guard',()=>{
+  assert.ok(searchEdge.includes('hc_take_api_rate_limit'));
+  assert.ok(searchEdge.includes("bucket:'search_minute'"));
+  assert.ok(searchEdge.includes("bucket:'search_day'"));
+  assert.ok(searchEdge.includes('happy-coding-search:'));
+  assert.ok(searchEdge.includes("{name:'HMAC',hash:'SHA-256'}"));
+  assert.ok(searchEdge.includes("error:'search_guard_unavailable'"));
+});
+
 test('legacy v0.0.1 example projects are removed from the visible experience',()=>{
   for(const id of ['soulbound','pixel-forge','quiet-forest'])assert.ok(cleanup.includes(id));
   assert.ok(cleanup.includes('Nenhum projeto ainda.'));
