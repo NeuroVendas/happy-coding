@@ -36,3 +36,12 @@ test('Windows workflow can publish the exact Squirrel assets required for update
   assert.match(workflow,/RELEASES/);
   assert.match(workflow,/gh release create/);
 });
+
+test('official Windows release must smoke the packaged browser before publication',()=>{
+  assert.match(workflow,/Smoke packaged browser startup before release/);
+  assert.match(workflow,/Start-Process -FilePath \$exe\.FullName/);
+  assert.match(workflow,/Start-Sleep -Seconds 8/);
+  const smoke=workflow.indexOf('Smoke packaged browser startup before release');
+  const release=workflow.indexOf('Publish GitHub Release for auto-update');
+  assert.ok(smoke>=0&&release>smoke,'startup smoke must run before release publication');
+});
