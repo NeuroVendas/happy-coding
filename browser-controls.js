@@ -5,6 +5,8 @@
 (() => {
   const DESKTOP = /Electron\//i.test(navigator.userAgent);
   const ROOT_CLASS = DESKTOP ? 'hc-desktop-host' : 'hc-web-host';
+  const byId = id => document.getElementById(id);
+  let routedQuery='';
   document.documentElement.classList.add(ROOT_CLASS);
 
   function applyHostLayout() {
@@ -21,14 +23,31 @@
     `;
     (document.head || document.documentElement).append(style);
   }
+
+  function searchRouteQuery(){
+    if(!location.hash.startsWith('#search='))return'';
+    try{return decodeURIComponent(location.hash.slice(8)).replace(/[\r\n\t]+/g,' ').replace(/\s+/g,' ').trim().slice(0,512);}catch{return'';}
+  }
+
+  function activateSearchRoute(){
+    const query=searchRouteQuery();
+    if(!query||query===routedQuery)return;
+    const form=byId('universalSearch');
+    const input=byId('searchInput');
+    if(!(form instanceof HTMLFormElement)||!(input instanceof HTMLInputElement))return;
+    routedQuery=query;input.value=query;form.requestSubmit();
+  }
+
   applyHostLayout();
+  window.addEventListener('hashchange',()=>queueMicrotask(activateSearchRoute));
+  if(document.readyState==='complete')activateSearchRoute();
+  else window.addEventListener('load',activateSearchRoute,{once:true});
 
   // In Desktop, the native Happy Coding chrome owns tabs, back/forward,
   // reload, address bar and tab restoration. The page must not create a
   // second fake browser UI on top of it.
   if (DESKTOP) return;
 
-  const byId = id => document.getElementById(id);
   let restoringSearch = false;
 
   function looksLikeAddress(value) {
