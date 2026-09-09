@@ -37,7 +37,7 @@ jobs:
             }
             $branch = '${{ github.head_ref }}'
             $uri = 'https://api.github.com/repos/${{ github.repository }}/contents/desktop/package-lock.json'
-            $meta = Invoke-RestMethod -Method Get -Uri "$uri?ref=$([uri]::EscapeDataString($branch))" -Headers $headers
+            $meta = Invoke-RestMethod -Method Get -Uri "${uri}?ref=$([uri]::EscapeDataString($branch))" -Headers $headers
             $lock = Get-Content 'desktop/package-lock.json' -Raw
             $payload = @{
               message = 'build: refresh locked security overrides'
