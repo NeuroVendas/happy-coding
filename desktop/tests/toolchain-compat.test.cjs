@@ -66,6 +66,21 @@ test('Packager 20 hook object is adapted back to the reviewed Forge callback sig
   assert.deepEqual(seen,['C:/HappyCoding/app','44.2.0','win32','x64']);
 });
 
+test('nested Forge promisify callback invocation remains supported explicitly',async()=>{
+  const bridge=buildBridge();
+  let seen=null;
+  const wrapped=bridge((buildPath,electronVersion,platform,arch,done)=>{
+    seen=[buildPath,electronVersion,platform,arch];
+    done();
+  });
+
+  await new Promise((resolve,reject)=>{
+    wrapped('C:/HappyCoding/app','44.2.0','win32','x64',error=>error?reject(error):resolve());
+  });
+
+  assert.deepEqual(seen,['C:/HappyCoding/app','44.2.0','win32','x64']);
+});
+
 test('finalized target arrays and callback errors preserve Promise semantics',async()=>{
   const bridge=buildBridge();
   const targets=[{platform:'win32',arch:'x64'}];
@@ -86,14 +101,17 @@ test('finalized target arrays and callback errors preserve Promise semantics',as
   );
 });
 
-test('unexpected Packager hook shapes fail closed instead of invoking legacy callbacks',()=>{
+test('unexpected hook shapes still fail closed instead of invoking legacy callbacks',()=>{
   const bridge=buildBridge();
   let invoked=false;
   const wrapped=bridge(()=>{invoked=true;});
 
-  assert.throws(
-    ()=>wrapped({platform:'win32',arch:'x64'}),
-    /Unexpected Packager 20 hook arguments/
-  );
+  for(const args of [
+    [{platform:'win32',arch:'x64'}],
+    ['C:/app','44.2.0','win32','x64'],
+    ['C:/app','44.2.0','win32','x64','not-a-callback']
+  ]){
+    assert.throws(()=>wrapped(...args),/Unexpected Packager 20 hook arguments/);
+  }
   assert.equal(invoked,false);
 });
