@@ -31,6 +31,22 @@ test('core tab and navigation controls cross the isolated preload bridge',()=>{
   }
 });
 
+test('new tab button sits directly after the rendered tabs like a normal browser',()=>{
+  const viewportStart=html.indexOf('class="tabs-viewport"');
+  const tabsIndex=html.indexOf('id="tabs"',viewportStart);
+  const newTabIndex=html.indexOf('id="newTab"',tabsIndex);
+  const viewportEnd=html.indexOf('</div>',newTabIndex);
+  assert.ok(viewportStart>=0&&tabsIndex>viewportStart&&newTabIndex>tabsIndex&&viewportEnd>newTabIndex,'new tab button must share the scrolling tab viewport after the tab list');
+  assert.ok(html.includes('.tabs{display:flex;gap:6px;align-items:center;flex:0 0 auto}'),'tab list must size to its tabs instead of pushing + to the far edge');
+  assert.ok(html.includes('.tabs-viewport{display:flex;gap:6px;align-items:center;min-width:0;overflow:auto;scrollbar-width:none;flex:1}'),'tab viewport must own available width and scrolling');
+});
+
+test('projects entry is discoverable instead of an unlabeled square',()=>{
+  assert.match(html,/id="workspacesBtn"[^>]*>▱ Projetos<\/button>/);
+  assert.ok(html.includes('.workspace-toggle{width:auto!important;min-width:104px'),'projects control should be a visible labeled action');
+  assert.ok(chrome.includes("getElementById('workspacesBtn').addEventListener('click',()=>window.happyDesktop.openWorkspaces())"));
+});
+
 test('new windows from websites become internal Happy Coding tabs',()=>{
   assert.ok(main.includes("wc.setWindowOpenHandler(({url})=>{createTab(url,true);return{action:'deny'};});"));
 });
