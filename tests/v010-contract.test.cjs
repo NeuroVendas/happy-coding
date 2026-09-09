@@ -78,6 +78,12 @@ test('community user discovery gets admin verification from server RPCs, never c
   assert.ok(community.includes('Seu e-mail nunca aparece aqui.'));
 });
 
+test('admin badges are omitted when a visible post cannot resolve to one unique author id',()=>{
+  assert.ok(community.includes("new Set(matches.map(p=>p.author_id).filter(Boolean))"));
+  assert.ok(community.includes('if(authorIds.length!==1)continue'));
+  assert.ok(community.includes("new Date(p.created_at).toLocaleDateString('pt-BR')"));
+});
+
 test('brand icon is the green Happy Coding face',()=>{
   assert.ok(icon.includes('#b7f34a'));
   assert.ok(icon.includes('=]'));
