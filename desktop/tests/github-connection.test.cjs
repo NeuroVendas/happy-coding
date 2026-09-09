@@ -24,6 +24,17 @@ test('device flow handles pending and slow_down, encrypts token, never exposes i
   const repos=await c.repositories();assert.equal(repos[0].name,'developer/game');
   c.forget();assert.equal(fs.existsSync(c.vaultPath),false);assert.equal(c.state().connected,false);
 });
+test('public repository issues are read-only, filtered and bounded',async t=>{
+  let requested='';const c=setup(t,async url=>{requested=url;return response([
+    {number:7,title:'Fix player spawn',html_url:'https://github.com/developer/game/issues/7',labels:[{name:'bug'},'gameplay']},
+    {number:8,title:'PR should not appear',html_url:'https://github.com/developer/game/pull/8',pull_request:{url:'x'},labels:[]}
+  ]);});
+  c.token='token';c.profile={login:'developer'};
+  const issues=await c.issues('https://github.com/developer/game');
+  assert.match(requested,/\/repos\/developer\/game\/issues\?state=open/);
+  assert.deepEqual(issues,[{number:7,title:'Fix player spawn',url:'https://github.com/developer/game/issues/7',labels:['bug','gameplay']}]);
+  await assert.rejects(c.issues('https://evil.example/developer/game'),/repositório GitHub válido/);
+});
 test('encryption unavailable and missing configuration fail before any authorization request',async t=>{
   const c=setup(t,()=>{throw Error('network should not be called');});c.clientId='';await assert.rejects(c.start(),/registro/);
   c.clientId='id';c.safeStorage.isEncryptionAvailable=()=>false;await assert.rejects(c.start(),/protegido/);
