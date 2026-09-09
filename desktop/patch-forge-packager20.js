@@ -53,14 +53,32 @@ function patchSource(source){
                 done(error);
             }
         });
+        const invokeForgeCallback = (legacyArgs, callback) => {
+            let settled = false;
+            const done = (err) => {
+                if (settled) return;
+                settled = true;
+                callback(err);
+            };
+            try {
+                const result = fn(...legacyArgs, done);
+                if (result && typeof result.then === 'function') result.catch(done);
+            }
+            catch (error) {
+                done(error);
+            }
+        };
         if (args.length === 1 && Array.isArray(args[0])) {
             return invokeLegacy([args[0]]);
         }
         if (args.length === 1 && args[0] && typeof args[0] === 'object') {
             const { buildPath, electronVersion, platform, arch } = args[0];
-            if (typeof buildPath === 'string') {
+            if (typeof buildPath === 'string' && typeof electronVersion === 'string' && typeof platform === 'string' && typeof arch === 'string') {
                 return invokeLegacy([buildPath, electronVersion, platform, arch]);
             }
+        }
+        if (args.length === 5 && typeof args[0] === 'string' && typeof args[1] === 'string' && typeof args[2] === 'string' && typeof args[3] === 'string' && typeof args[4] === 'function') {
+            return invokeForgeCallback(args.slice(0, 4), args[4]);
         }
         throw new Error('Unexpected Packager 20 hook arguments. Refusing to invoke the Forge 7 callback bridge.');
     };
