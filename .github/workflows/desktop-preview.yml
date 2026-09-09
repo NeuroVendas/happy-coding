@@ -29,7 +29,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if (-not (git diff --quiet -- desktop/package-lock.json)) {
+          git diff --quiet -- desktop/package-lock.json
+          $lockChanged = $LASTEXITCODE -ne 0
+          $global:LASTEXITCODE = 0
+          if ($lockChanged) {
             $headers = @{
               Authorization = "Bearer $env:GH_TOKEN"
               Accept = 'application/vnd.github+json'
@@ -50,6 +53,7 @@ jobs:
           } else {
             Write-Host 'Dependency lock already matches package metadata.'
           }
+          $global:LASTEXITCODE = 0
       - name: Check web JavaScript
         shell: pwsh
         run: |
