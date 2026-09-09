@@ -11,6 +11,9 @@ const cloud=read('cloud-ai.js');
 const cleanup=read('v010-cleanup.js');
 const community=read('community-v010.js');
 const icon=read('icon.svg');
+const supabaseConfig=read('supabase/config.toml');
+const aiEdge=read('edge-functions/ai-chat/index.ts');
+const searchEdge=read('edge-functions/web-search/index.ts');
 
 test('v0.10 bootstrap loads replacement behavior before legacy app handlers',()=>{
   for(const file of ['search-v010.js','cloud-ai.js','v010-cleanup.js','community-v010.js'])assert.ok(sync.includes(file),file);
@@ -32,6 +35,25 @@ test('cloud assistant has no local model download and only explicit project cont
   assert.equal(/HuggingFace|transformers|pipeline\(|SmolLM|Baixando (o )?modelo/i.test(cloud),false);
   for(const command of ['/sem-projeto','/contexto','/projeto'])assert.ok(cloud.includes(command));
   assert.ok(cloud.includes('nenhum arquivo é lido automaticamente'));
+});
+
+test('public edge functions use publishable-key auth without pretending it is a JWT',()=>{
+  assert.match(supabaseConfig,/\[functions\.ai-chat\][\s\S]*verify_jwt\s*=\s*false/);
+  assert.match(supabaseConfig,/\[functions\.web-search\][\s\S]*verify_jwt\s*=\s*false/);
+  for(const source of [aiEdge,searchEdge]){
+    assert.ok(source.includes("req.headers.get('apikey')!==PUBLIC_KEY"));
+    assert.ok(source.includes("ALLOWED_ORIGIN='https://neurovendas.github.io'")||source.includes("ALLOWED_ORIGIN = 'https://neurovendas.github.io'"));
+  }
+  assert.ok(cloud.includes("'apikey':KEY"));
+  assert.equal(/Authorization\s*:\s*`?Bearer\s+\$?\{?KEY/i.test(cloud),false);
+});
+
+test('Gemini secret stays server-side and modern Supabase backend keys are supported',()=>{
+  assert.ok(aiEdge.includes('SUPABASE_SECRET_KEYS'));
+  assert.ok(aiEdge.includes('hc_get_ai_secret'));
+  assert.ok(aiEdge.includes("if(!service.startsWith('sb_secret_'))headers.Authorization"));
+  assert.equal(/happy_coding_gemini|SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SECRET_KEYS/.test(cloud),false);
+  assert.equal(/happy_coding_gemini|SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SECRET_KEYS/.test(search),false);
 });
 
 test('legacy v0.0.1 example projects are removed from the visible experience',()=>{
