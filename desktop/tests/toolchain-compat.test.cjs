@@ -85,3 +85,15 @@ test('finalized target arrays and callback errors preserve Promise semantics',as
     /compat failure/
   );
 });
+
+test('unexpected Packager hook shapes fail closed instead of invoking legacy callbacks',()=>{
+  const bridge=buildBridge();
+  let invoked=false;
+  const wrapped=bridge(()=>{invoked=true;});
+
+  assert.throws(
+    ()=>wrapped({platform:'win32',arch:'x64'}),
+    /Unexpected Packager 20 hook arguments/
+  );
+  assert.equal(invoked,false);
+});
