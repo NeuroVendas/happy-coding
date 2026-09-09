@@ -30,7 +30,7 @@
     "svg-to-ico": "2.0.0"
   },
   "overrides": {
-    "@electron/packager": "20.3.0",
+    "@electron/packager": "20.0.1",
     "tar": "7.5.22",
     "tmp": "0.2.7"
   }
