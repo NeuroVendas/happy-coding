@@ -1,19 +1,26 @@
 {
   "name": "happy-coding-desktop",
   "productName": "Happy Coding",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "private": true,
   "description": "Happy Coding =] desktop browser",
   "author": "Happy Coding",
   "license": "UNLICENSED",
-  "main": "main.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NeuroVendas/happy-coding.git"
+  },
+  "main": "bootstrap.js",
   "scripts": {
     "start": "electron .",
-    "check": "node --check main.js && node --check preload.js && node --check chrome.js && node --check browser-core.js && node --check download-core.js && node --check library-core.js && node --check session-core.js && node --check search-core.js && node --check search.js && node --check forge.config.js",
+    "check": "node --check bootstrap.js && node --check main.js && node --check preload.js && node --check chrome.js && node --check browser-core.js && node --check download-core.js && node --check library-core.js && node --check session-core.js && node --check search-core.js && node --check search.js && node --check forge.config.js",
     "test": "node --test tests/*.test.cjs",
     "package": "electron-forge package",
     "make": "electron-forge make",
     "make:win": "electron-forge make --platform=win32 --arch=x64"
+  },
+  "dependencies": {
+    "electron-squirrel-startup": "^1.0.1"
   },
   "devDependencies": {
     "@electron-forge/cli": "7.11.2",
