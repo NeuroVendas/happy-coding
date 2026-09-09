@@ -1,17 +1,35 @@
 'use strict';
 
-// Makes the browser-like controls in the web/PWA shell perform real actions.
-// In the Electron build, window.open() is already intercepted by the native
-// shell and becomes a real Happy Coding tab. In a normal browser/PWA it falls
-// back to an actual browser tab/window.
+// The web/PWA is the Happy Coding workspace; the Electron build is the browser.
+// Do not pretend the web shell can host arbitrary sites in internal tabs.
 (() => {
-  const HOME = new URL('./', location.href).href;
-  let restoringSearch = false;
+  const DESKTOP = /Electron\//i.test(navigator.userAgent);
+  const ROOT_CLASS = DESKTOP ? 'hc-desktop-host' : 'hc-web-host';
+  document.documentElement.classList.add(ROOT_CLASS);
+
+  function applyHostLayout() {
+    if (document.getElementById('hc-host-layout')) return;
+    const style = document.createElement('style');
+    style.id = 'hc-host-layout';
+    style.textContent = `
+      html.hc-desktop-host .browser-chrome{display:none!important}
+      html.hc-desktop-host .workspace{min-height:100vh!important}
+      html.hc-desktop-host .sidebar{top:0!important;height:100vh!important}
+      html.hc-web-host .tabs-row{display:none!important}
+      html.hc-web-host .workspace{min-height:calc(100vh - 62px)!important}
+      html.hc-web-host .sidebar{top:62px!important;height:calc(100vh - 62px)!important}
+    `;
+    (document.head || document.documentElement).append(style);
+  }
+  applyHostLayout();
+
+  // In Desktop, the native Happy Coding chrome owns tabs, back/forward,
+  // reload, address bar and tab restoration. The page must not create a
+  // second fake browser UI on top of it.
+  if (DESKTOP) return;
 
   const byId = id => document.getElementById(id);
-  const notify = message => {
-    if (typeof window.toast === 'function') window.toast(message);
-  };
+  let restoringSearch = false;
 
   function looksLikeAddress(value) {
     const v = String(value || '').trim();
@@ -30,19 +48,6 @@
     return '';
   }
 
-  function openRealTab(url = HOME) {
-    const opened = window.open(url, '_blank', 'noopener');
-    if (!opened && !/Electron/i.test(navigator.userAgent)) {
-      notify('O navegador bloqueou a nova aba. Permita pop-ups para o Happy Coding.');
-    }
-  }
-
-  function goHome() {
-    const home = document.querySelector('[data-view="home"]');
-    if (home instanceof HTMLElement) home.click();
-    else location.href = HOME;
-  }
-
   function restoreSearch(query) {
     const input = byId('addressInput');
     const form = byId('addressForm');
@@ -53,8 +58,7 @@
     queueMicrotask(() => { restoringSearch = false; });
   }
 
-  // Give searches their own browser-history entry. This is what makes the
-  // visible back/forward arrows useful after performing searches.
+  // Web-mode arrows remain useful for workspace/search history.
   document.addEventListener('submit', event => {
     const form = event.target;
     if (!(form instanceof HTMLFormElement)) return;
@@ -65,71 +69,23 @@
 
   window.addEventListener('popstate', event => {
     const nav = event.state?.hcBrowser;
-    if (nav?.kind === 'search' && nav.query) {
-      queueMicrotask(() => restoreSearch(String(nav.query)));
-    }
+    if (nav?.kind === 'search' && nav.query) queueMicrotask(() => restoreSearch(String(nav.query)));
   });
 
-  // Capture these clicks before the old prototype handlers in app.js.
   document.addEventListener('click', event => {
     const target = event.target instanceof Element ? event.target.closest('button') : null;
     if (!(target instanceof HTMLButtonElement)) return;
-
     if (target.id === 'backBtn') {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      history.back();
-      return;
+      event.preventDefault();event.stopImmediatePropagation();history.back();return;
     }
     if (target.id === 'forwardBtn') {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      history.forward();
-      return;
+      event.preventDefault();event.stopImmediatePropagation();history.forward();return;
     }
     if (target.id === 'reloadBtn') {
-      event.preventDefault();
-      event.stopImmediatePropagation();
+      event.preventDefault();event.stopImmediatePropagation();
       const nav = history.state?.hcBrowser;
       if (nav?.kind === 'search' && nav.query) restoreSearch(String(nav.query));
       else location.reload();
-      return;
-    }
-    if (target.id === 'newTabBtn') {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      openRealTab(HOME);
-      return;
-    }
-    if (target.id === 'happyTab') {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      goHome();
-      return;
-    }
-    if (target.id === 'godotTab') {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      openRealTab('https://docs.godotengine.org/');
     }
   }, true);
-
-  // The x glyphs in the old mock tabs implied a close button but were only
-  // decorative. Hide them until the native tab strip owns close behavior.
-  for (const id of ['happyTab', 'godotTab']) {
-    const tab = byId(id);
-    const last = tab?.lastElementChild;
-    if (last) {
-      last.setAttribute('hidden', '');
-      last.setAttribute('aria-hidden', 'true');
-    }
-  }
-
-  const newTab = byId('newTabBtn');
-  if (newTab) {
-    newTab.title = 'Nova aba';
-    newTab.setAttribute('aria-label', 'Nova aba');
-  }
-  const godot = byId('godotTab');
-  if (godot) godot.title = 'Abrir Godot Docs em nova aba';
 })();
