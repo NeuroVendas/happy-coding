@@ -1,5 +1,6 @@
 -- Happy Coding v0.10: global backend-only rate limiting for public AI endpoints.
 -- Applied to project vzfnoaixjgyifutklpwn as migration global_ai_rate_limit_v010.
+-- The explicit deny policy was applied separately as explicit_deny_api_rate_limits_v010.
 create table if not exists public.hc_api_rate_limits (
   bucket text not null,
   subject_hash text not null,
@@ -14,6 +15,13 @@ create table if not exists public.hc_api_rate_limits (
 
 alter table public.hc_api_rate_limits enable row level security;
 revoke all on public.hc_api_rate_limits from public, anon, authenticated;
+drop policy if exists hc_api_rate_limits_deny_client on public.hc_api_rate_limits;
+create policy hc_api_rate_limits_deny_client
+on public.hc_api_rate_limits
+for all
+to anon, authenticated
+using (false)
+with check (false);
 
 create or replace function public.hc_take_api_rate_limit(
   p_bucket text,
