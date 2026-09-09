@@ -1,7 +1,7 @@
 {
   "name": "happy-coding-desktop",
   "productName": "Happy Coding",
-  "version": "0.9.2",
+  "version": "0.10.0",
   "private": true,
   "description": "Happy Coding =] desktop browser",
   "author": "Happy Coding",
@@ -13,11 +13,11 @@
   "main": "bootstrap.js",
   "scripts": {
     "start": "electron .",
-    "check": "node --check workspace-core.js && node --check workspace-service.js && node --check workspace-preload.js && node --check workspaces.js && node --check github-connection.js && node --check bootstrap.js && node --check main.js && node --check preload.js && node --check chrome.js && node --check browser-core.js && node --check download-core.js && node --check library-core.js && node --check session-core.js && node --check search-core.js && node --check search.js && node --check forge.config.js",
+    "check": "node --check build-icon.js && node --check workspace-core.js && node --check workspace-service.js && node --check workspace-preload.js && node --check workspaces.js && node --check github-connection.js && node --check bootstrap.js && node --check main.js && node --check preload.js && node --check chrome.js && node --check browser-core.js && node --check download-core.js && node --check library-core.js && node --check session-core.js && node --check search-core.js && node --check search.js && node --check forge.config.js",
     "test": "node --test tests/*.test.cjs",
     "package": "electron-forge package",
     "make": "electron-forge make",
-    "make:win": "electron-forge make --platform=win32 --arch=x64"
+    "make:win": "node build-icon.js && electron-forge make --platform=win32 --arch=x64"
   },
   "dependencies": {
     "electron-squirrel-startup": "^1.0.1"
@@ -26,6 +26,7 @@
     "@electron-forge/cli": "7.11.2",
     "@electron-forge/maker-squirrel": "7.11.2",
     "@electron-forge/maker-zip": "7.11.2",
-    "electron": "44.2.0"
+    "electron": "44.2.0",
+    "svg-to-ico": "2.0.0"
   }
 }
