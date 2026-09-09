@@ -23,13 +23,17 @@ const ACCOUNT='https://neurovendas.github.io/happy-coding/account.html';
 let state={activeTabId:'',tabs:[]},downloads=[],library={bookmarks:[],history:[]},activePanel=null,libraryMode='favorites';
 
 function activeTab(){return state.tabs.find(tab=>tab.id===state.activeTabId)||null;}
-function displayUrl(tab){if(!tab)return'happy://home';if(tab.kind==='search')return tab.searchQuery||'';return tab.url===HOME?'happy://home':tab.url;}
+function embeddedSearchQuery(raw){try{const url=new URL(String(raw||''));if(url.origin+url.pathname!==new URL(HOME).origin+new URL(HOME).pathname)return'';if(!url.hash.startsWith('#search='))return'';return decodeURIComponent(url.hash.slice(8)).trim().slice(0,512);}catch{return'';}}
+function isSearchTab(tab){return !!tab&&(tab.kind==='search'||!!embeddedSearchQuery(tab.url));}
+function displayUrl(tab){if(!tab)return'happy://home';if(tab.kind==='search')return tab.searchQuery||'';const query=embeddedSearchQuery(tab.url);if(query)return query;return tab.url===HOME?'happy://home':tab.url;}
+function looksLikeAddress(raw){const v=String(raw||'').trim();if(!v||v==='happy://home')return true;if(/^[a-z][a-z0-9+.-]*:/i.test(v))return true;return /^([a-z0-9-]+\.)+[a-z]{2,}(?::\d{1,5})?(\/.*)?$/i.test(v);}
+function navigationTarget(raw){const value=String(raw||'').trim();if(!value||looksLikeAddress(value))return value;return `${HOME}#search=${encodeURIComponent(value.slice(0,512))}`;}
 function formatBytes(value){let n=Math.max(0,Number(value)||0),i=0;const units=['B','KB','MB','GB','TB'];while(n>=1024&&i<units.length-1){n/=1024;i++;}return`${n>=10||i===0?n.toFixed(0):n.toFixed(1)} ${units[i]}`;}
 function originLabel(url){try{return new URL(url).hostname||url;}catch{return url||'origem desconhecida';}}
 function formatWhen(value){if(!value)return'';try{return new Date(value).toLocaleString('pt-BR');}catch{return'';}}
 function stateLabel(item){if(item.state==='completed')return'Concluído';if(item.state==='cancelled')return'Cancelado';if(item.state==='interrupted')return'Interrompido';if(item.paused)return'Pausado';return item.total?`${item.percent}%`:'Baixando…';}
-function currentBookmarked(){const tab=activeTab();if(!tab||tab.kind==='search')return false;return library.bookmarks.some(item=>item.url===tab.url);}
-function renderBookmarkState(){const tab=activeTab();const saved=currentBookmarked();bookmarkBtn.disabled=!tab||tab.kind==='search';bookmarkBtn.classList.toggle('saved',saved);bookmarkBtn.textContent=saved?'★':'☆';bookmarkBtn.title=tab?.kind==='search'?'Resultados de pesquisa não são favoritados':saved?'Remover dos favoritos (Ctrl+D)':'Adicionar aos favoritos (Ctrl+D)';}
+function currentBookmarked(){const tab=activeTab();if(!tab||isSearchTab(tab))return false;return library.bookmarks.some(item=>item.url===tab.url);}
+function renderBookmarkState(){const tab=activeTab();const search=isSearchTab(tab);const saved=currentBookmarked();bookmarkBtn.disabled=!tab||search;bookmarkBtn.classList.toggle('saved',saved);bookmarkBtn.textContent=saved?'★':'☆';bookmarkBtn.title=search?'Resultados de pesquisa não são favoritados':saved?'Remover dos favoritos (Ctrl+D)':'Adicionar aos favoritos (Ctrl+D)';}
 function renderTabs(){
   tabsRoot.replaceChildren();
   for(const tab of state.tabs){
@@ -47,7 +51,8 @@ function render(next){
   const tab=activeTab();
   back.disabled=!tab?.canGoBack;forward.disabled=!tab?.canGoForward;
   if(document.activeElement!==address)address.value=displayUrl(tab);
-  status.textContent=tab?.error||((tab?.loading)?(tab?.kind==='search'?'Pesquisando…':'Carregando…'):(tab?.kind==='search'?'Busca segura':'Proteção ativa'));status.title=status.textContent;
+  const search=isSearchTab(tab);
+  status.textContent=tab?.error||((tab?.loading)?(search?'Pesquisando…':'Carregando…'):(search?'Busca segura':'Proteção ativa'));status.title=status.textContent;
 }
 function actionButton(text,handler,cls=''){const button=document.createElement('button');button.type='button';button.textContent=text;if(cls)button.className=cls;button.addEventListener('click',handler);return button;}
 function renderDownloads(next=downloads){
@@ -85,7 +90,7 @@ async function setPanel(name){
   activePanel=name||null;downloadPanel.classList.toggle('hidden',activePanel!=='downloads');libraryPanel.classList.toggle('hidden',activePanel!=='library');downloadsBtn.classList.toggle('active',activePanel==='downloads');libraryBtn.classList.toggle('active',activePanel==='library');await window.happyDesktop.setDownloadsOpen(!!activePanel);
 }
 
-document.getElementById('go').addEventListener('submit',async event=>{event.preventDefault();await window.happyDesktop.navigate(address.value);address.blur();});
+document.getElementById('go').addEventListener('submit',async event=>{event.preventDefault();await window.happyDesktop.navigate(navigationTarget(address.value));address.blur();});
 back.addEventListener('click',()=>window.happyDesktop.back());forward.addEventListener('click',()=>window.happyDesktop.forward());reload.addEventListener('click',()=>window.happyDesktop.reload());
 document.getElementById('newTab').addEventListener('click',()=>window.happyDesktop.newTab('happy://home'));
 restoreTabBtn.addEventListener('click',()=>window.happyDesktop.restoreTab());
