@@ -14,6 +14,7 @@ const icon=read('icon.svg');
 const supabaseConfig=read('supabase/config.toml');
 const aiEdge=read('edge-functions/ai-chat/index.ts');
 const searchEdge=read('edge-functions/web-search/index.ts');
+const apiLimitSql=read('backend/global-ai-rate-limit-v010.sql');
 
 test('v0.10 bootstrap loads replacement behavior before legacy app handlers',()=>{
   for(const file of ['search-v010.js','cloud-ai.js','v010-cleanup.js','community-v010.js'])assert.ok(sync.includes(file),file);
@@ -63,6 +64,18 @@ test('cloud AI is configured for low latency with a stable fallback',()=>{
   assert.match(aiEdge,/thinkingConfig:\{thinkingLevel:'minimal'\}/);
   assert.ok(aiEdge.includes('ATTEMPT_TIMEOUTS'));
   assert.equal(/temperature\s*:/.test(aiEdge),false);
+});
+
+test('AI quota protection is global, backend-only and stores only a keyed hash',()=>{
+  assert.ok(aiEdge.includes('hc_take_api_rate_limit'));
+  assert.ok(aiEdge.includes("bucket:'ai_minute'"));
+  assert.ok(aiEdge.includes("bucket:'ai_day'"));
+  assert.ok(aiEdge.includes("crypto.subtle.importKey('raw'"));
+  assert.ok(aiEdge.includes("{name:'HMAC',hash:'SHA-256'}"));
+  assert.ok(apiLimitSql.includes('revoke all on public.hc_api_rate_limits from public, anon, authenticated'));
+  assert.ok(apiLimitSql.includes('grant execute on function public.hc_take_api_rate_limit(text,text,integer,integer) to service_role'));
+  assert.ok(apiLimitSql.includes('security definer'));
+  assert.ok(apiLimitSql.includes("set search_path=''"));
 });
 
 test('legacy v0.0.1 example projects are removed from the visible experience',()=>{
