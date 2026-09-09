@@ -8,6 +8,8 @@ const {cleanFilename,isRiskyDownload,safePercent}=require('./download-core');
 const {cleanUrl,cleanLibraryTitle,normalizeLibrary,addHistory,toggleBookmark}=require('./library-core');
 const {normalizeSession,buildSessionSnapshot}=require('./session-core');
 const {cleanSearchQuery,logicalSearchUrl,googleSearchUrl,normalizeGoogleResults,googleBlocked}=require('./search-core');
+const {createWorkspaceService}=require('./workspace-service');
+let workspaces=null;
 
 const CHROME_COLLAPSED=104;
 const CHROME_EXPANDED=360;
@@ -217,6 +219,7 @@ app.whenReady().then(()=>{
   searchSession=session.fromPartition(SEARCH_PARTITION);searchSession.setPermissionRequestHandler((_wc,_permission,callback)=>callback(false));searchSession.setPermissionCheckHandler(()=>false);searchSession.on('will-download',event=>event.preventDefault());
   session.defaultSession.setPermissionRequestHandler((_wc,_permission,callback)=>callback(false));session.defaultSession.setPermissionCheckHandler(()=>false);session.defaultSession.on('will-download',registerDownload);
   win=new BaseWindow({width:1280,height:820,minWidth:760,minHeight:520,title:'Happy Coding =]'});
+  workspaces=createWorkspaceService({userData:app.getPath('userData'),getTabs:()=>sessionEntries().map(item=>({...item,title:tabs.get(item.id)?.title||item.url})),openUrl:url=>{if(!win)throw new Error('Reabra o navegador para abrir os links do espaço.');win.show();win.focus();return createTab(url,true);}});
   chromeView=new WebContentsView({webPreferences:{preload:path.join(__dirname,'preload.js'),nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true}});
   win.contentView.addChildView(chromeView);chromeView.webContents.loadFile(path.join(__dirname,'chrome.html'));chromeView.webContents.on('did-finish-load',()=>{sendState();sendDownloads();sendLibrary();});
   restoringSession=true;
@@ -224,9 +227,9 @@ app.whenReady().then(()=>{
   else createTab(HOME,true);
   restoringSession=false;saveSession(false);resize();win.on('resize',resize);
   win.on('close',()=>{restoringSession=false;saveSession(true);});
-  win.on('closed',()=>{for(const tab of tabs.values())if(!tab.view.webContents.isDestroyed())tab.view.webContents.close();tabs.clear();if(!chromeView?.webContents.isDestroyed())chromeView.webContents.close();win=null;chromeView=null;activeTabId=null;});
+  win.on('closed',()=>{workspaces?.close();for(const tab of tabs.values())if(!tab.view.webContents.isDestroyed())tab.view.webContents.close();tabs.clear();if(!chromeView?.webContents.isDestroyed())chromeView.webContents.close();win=null;chromeView=null;activeTabId=null;});
 });
-app.on('before-quit',()=>{if(win)saveSession(true);});
+app.on('before-quit',()=>{workspaces?.close();if(win)saveSession(true);});
 app.on('window-all-closed',()=>{if(process.platform!=='darwin')app.quit();});
 
 ipcMain.handle('hc:navigate',(event,value)=>isChromeSender(event.sender)&&navigate(value));
@@ -247,3 +250,4 @@ ipcMain.handle('hc:downloads-clear',event=>isChromeSender(event.sender)&&clearFi
 ipcMain.handle('hc:bookmark-toggle',event=>isChromeSender(event.sender)&&toggleCurrentBookmark());
 ipcMain.handle('hc:bookmark-remove',(event,id)=>isChromeSender(event.sender)&&removeBookmark(id));
 ipcMain.handle('hc:history-clear',event=>isChromeSender(event.sender)&&clearHistory());
+ipcMain.handle('hc:open-workspaces',event=>isChromeSender(event.sender)&&event.senderFrame===chromeView.webContents.mainFrame&&workspaces?.open());
