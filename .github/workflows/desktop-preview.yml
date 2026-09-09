@@ -72,6 +72,8 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: Happy-Coding-0.10.0-preview
-          path: desktop/out/make/**/*
+          path: |
+            desktop/out/make/**/*
+            desktop/package-lock.json
           if-no-files-found: error
           retention-days: 7
