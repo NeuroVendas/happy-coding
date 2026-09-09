@@ -36,6 +36,15 @@
 
 ## Web/PWA
 
+## Próxima versão em preparação — 0.9.1
+
+- Branch `feature/dev-workspaces`: espaços locais de projeto e Conexões em janela desktop isolada. Botão ▱ na barra nativa.
+- Notas, repositório, seleção explícita de abas para guardar referências e reabertura dos links. `project.godot` e executável Godot escolhidos por diálogo nativo; abertura com confirmação e sem shell.
+- GitHub Device Flow implementado; lista repositórios públicos, token protegido pelo sistema e sem exposição ao renderer. Client ID público fornecido pelo proprietário configurado em `desktop/integrations.json`; falta validar autorização real na prévia Windows. Tokens expirados exigem reconexão (sem renovação automática); ver `desktop/CONNECTIONS_SETUP.md`.
+- A prévia será salva em PR rascunho e validada em Windows por workflow sem publicar release. Não misturar essa versão com a v0.9.0 distribuída até concluir a configuração.
+- Novos arquivos `workspace-core.js`, `workspace-service.js`, `workspace-preload.js`, `workspaces.html/css/js`, `github-connection.js` e testes em `desktop/tests`.
+- Os projetos desktop são locais e separados dos projetos web/Supabase já existentes. Não migrar ou sincronizar os dados silenciosamente.
+
 - Service worker permanece em cache `v8`.
 - Web/PWA e desktop são frentes diferentes; não chamar o PWA de navegador desktop completo.
 

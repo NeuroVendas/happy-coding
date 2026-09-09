@@ -95,6 +95,7 @@ back.addEventListener('click',()=>window.happyDesktop.back());forward.addEventLi
 document.getElementById('newTab').addEventListener('click',()=>window.happyDesktop.newTab('happy://home'));
 restoreTabBtn.addEventListener('click',()=>window.happyDesktop.restoreTab());
 accountBtn.addEventListener('click',()=>window.happyDesktop.navigate(ACCOUNT));
+document.getElementById('workspacesBtn').addEventListener('click',()=>window.happyDesktop.openWorkspaces());
 bookmarkBtn.addEventListener('click',()=>window.happyDesktop.toggleBookmark());downloadsBtn.addEventListener('click',()=>setPanel(activePanel==='downloads'?null:'downloads'));libraryBtn.addEventListener('click',()=>setPanel(activePanel==='library'?null:'library'));
 document.getElementById('clearDownloads').addEventListener('click',()=>window.happyDesktop.clearFinishedDownloads());
 favoritesTab.addEventListener('click',()=>{libraryMode='favorites';renderLibraryList();});historyTab.addEventListener('click',()=>{libraryMode='history';renderLibraryList();});clearHistory.addEventListener('click',()=>{if(confirm('Limpar todo o histórico local deste navegador?'))window.happyDesktop.clearHistory();});

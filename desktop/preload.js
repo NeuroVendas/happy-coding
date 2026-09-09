@@ -13,6 +13,7 @@ function id(value){return String(value||'').slice(0,80);}
 function libraryItem(item,timeKey){return{id:id(item?.id),url:String(item?.url||'').slice(0,4096),title:String(item?.title||'Sem título').slice(0,120),[timeKey]:Math.max(0,Number(item?.[timeKey])||0)};}
 
 contextBridge.exposeInMainWorld('happyDesktop',Object.freeze({
+  openWorkspaces:()=>ipcRenderer.invoke('hc:open-workspaces'),
   navigate:value=>ipcRenderer.invoke('hc:navigate',String(value).slice(0,4096)),
   back:()=>ipcRenderer.invoke('hc:back'),
   forward:()=>ipcRenderer.invoke('hc:forward'),
