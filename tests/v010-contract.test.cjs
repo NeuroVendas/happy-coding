@@ -56,6 +56,15 @@ test('Gemini secret stays server-side and modern Supabase backend keys are suppo
   assert.equal(/happy_coding_gemini|SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SECRET_KEYS/.test(search),false);
 });
 
+test('cloud AI is configured for low latency with a stable fallback',()=>{
+  assert.ok(aiEdge.includes("'gemini-3.5-flash-lite'"));
+  assert.ok(aiEdge.includes("'gemini-3.1-flash-lite'"));
+  assert.ok(aiEdge.indexOf("'gemini-3.5-flash-lite'")<aiEdge.indexOf("'gemini-3.1-flash-lite'"));
+  assert.match(aiEdge,/thinkingConfig:\{thinkingLevel:'minimal'\}/);
+  assert.ok(aiEdge.includes('ATTEMPT_TIMEOUTS'));
+  assert.equal(/temperature\s*:/.test(aiEdge),false);
+});
+
 test('legacy v0.0.1 example projects are removed from the visible experience',()=>{
   for(const id of ['soulbound','pixel-forge','quiet-forest'])assert.ok(cleanup.includes(id));
   assert.ok(cleanup.includes('Nenhum projeto ainda.'));
