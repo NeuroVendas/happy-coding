@@ -62,7 +62,7 @@ function patchSource(source){
                 return invokeLegacy([buildPath, electronVersion, platform, arch]);
             }
         }
-        void fn(...args);
+        throw new Error('Unexpected Packager 20 hook arguments. Refusing to invoke the Forge 7 callback bridge.');
     };
 }`;
   return{source:source.replace(legacy,replacement),changed:true};
