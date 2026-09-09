@@ -36,6 +36,7 @@ jobs:
           node --check ai-local.js
           node --input-type=module --check < account.js
           node --input-type=module --check < admin.js
+          node --check desktop/bootstrap.js
           node --check desktop/main.js
           node --check desktop/preload.js
           node --check desktop/chrome.js
