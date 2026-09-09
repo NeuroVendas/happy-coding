@@ -69,6 +69,19 @@ jobs:
       - name: Package Windows preview
         working-directory: desktop
         run: npm run make:win
+      - name: Smoke packaged browser startup
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Path 'desktop/out' -Filter 'HappyCoding.exe' -File -Recurse | Select-Object -First 1
+          if (-not $exe) { throw 'Packaged HappyCoding.exe was not found.' }
+          Write-Host "Starting packaged browser: $($exe.FullName)"
+          $process = Start-Process -FilePath $exe.FullName -ArgumentList '--disable-gpu' -PassThru
+          Start-Sleep -Seconds 8
+          if ($process.HasExited) {
+            throw "Packaged Happy Coding exited during startup smoke. Exit code: $($process.ExitCode)"
+          }
+          Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+          Write-Host 'Packaged Happy Coding stayed alive through startup smoke.'
       - uses: actions/upload-artifact@v4
         with:
           name: Happy-Coding-0.10.0-preview
