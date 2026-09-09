@@ -4,6 +4,8 @@ const tabsRoot=document.getElementById('tabs');
 const back=document.getElementById('back');
 const forward=document.getElementById('forward');
 const reload=document.getElementById('reload');
+const restoreTabBtn=document.getElementById('restoreTab');
+const accountBtn=document.getElementById('accountBtn');
 const status=document.getElementById('status');
 const downloadsBtn=document.getElementById('downloadsBtn');
 const downloadPanel=document.getElementById('downloadPanel');
@@ -17,6 +19,7 @@ const favoritesTab=document.getElementById('favoritesTab');
 const historyTab=document.getElementById('historyTab');
 const clearHistory=document.getElementById('clearHistory');
 const HOME='https://neurovendas.github.io/happy-coding/';
+const ACCOUNT='https://neurovendas.github.io/happy-coding/account.html';
 let state={activeTabId:'',tabs:[]},downloads=[],library={bookmarks:[],history:[]},activePanel=null,libraryMode='favorites';
 
 function activeTab(){return state.tabs.find(tab=>tab.id===state.activeTabId)||null;}
@@ -35,7 +38,7 @@ function renderTabs(){
     if(tab.loading){const dot=document.createElement('span');dot.className='loading';dot.setAttribute('aria-label','Carregando');main.append(dot);}
     const title=document.createElement('span');title.className='tab-title';title.textContent=tab.title||'Nova aba';main.append(title);
     main.addEventListener('click',()=>window.happyDesktop.activateTab(tab.id));
-    const close=document.createElement('button');close.type='button';close.className='tab-close';close.textContent='×';close.title='Fechar aba';close.setAttribute('aria-label',`Fechar ${tab.title||'aba'}`);close.addEventListener('click',()=>window.happyDesktop.closeTab(tab.id));
+    const close=document.createElement('button');close.type='button';close.className='tab-close';close.textContent='×';close.title='Fechar aba (Ctrl+W)';close.setAttribute('aria-label',`Fechar ${tab.title||'aba'}`);close.addEventListener('click',()=>window.happyDesktop.closeTab(tab.id));
     item.append(main,close);tabsRoot.append(item);
   }
 }
@@ -44,7 +47,7 @@ function render(next){
   const tab=activeTab();
   back.disabled=!tab?.canGoBack;forward.disabled=!tab?.canGoForward;
   if(document.activeElement!==address)address.value=displayUrl(tab);
-  status.textContent=tab?.error||((tab?.loading)?(tab?.kind==='search'?'Buscando no Google…':'Carregando…'):(tab?.kind==='search'?'Google · SafeSearch':'HTTPS + SafeSearch'));status.title=status.textContent;
+  status.textContent=tab?.error||((tab?.loading)?(tab?.kind==='search'?'Pesquisando…':'Carregando…'):(tab?.kind==='search'?'Busca segura':'Proteção ativa'));status.title=status.textContent;
 }
 function actionButton(text,handler,cls=''){const button=document.createElement('button');button.type='button';button.textContent=text;if(cls)button.className=cls;button.addEventListener('click',handler);return button;}
 function renderDownloads(next=downloads){
@@ -85,6 +88,8 @@ async function setPanel(name){
 document.getElementById('go').addEventListener('submit',async event=>{event.preventDefault();await window.happyDesktop.navigate(address.value);address.blur();});
 back.addEventListener('click',()=>window.happyDesktop.back());forward.addEventListener('click',()=>window.happyDesktop.forward());reload.addEventListener('click',()=>window.happyDesktop.reload());
 document.getElementById('newTab').addEventListener('click',()=>window.happyDesktop.newTab('happy://home'));
+restoreTabBtn.addEventListener('click',()=>window.happyDesktop.restoreTab());
+accountBtn.addEventListener('click',()=>window.happyDesktop.navigate(ACCOUNT));
 bookmarkBtn.addEventListener('click',()=>window.happyDesktop.toggleBookmark());downloadsBtn.addEventListener('click',()=>setPanel(activePanel==='downloads'?null:'downloads'));libraryBtn.addEventListener('click',()=>setPanel(activePanel==='library'?null:'library'));
 document.getElementById('clearDownloads').addEventListener('click',()=>window.happyDesktop.clearFinishedDownloads());
 favoritesTab.addEventListener('click',()=>{libraryMode='favorites';renderLibraryList();});historyTab.addEventListener('click',()=>{libraryMode='history';renderLibraryList();});clearHistory.addEventListener('click',()=>{if(confirm('Limpar todo o histórico local deste navegador?'))window.happyDesktop.clearHistory();});
