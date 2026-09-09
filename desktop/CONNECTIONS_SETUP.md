@@ -2,15 +2,20 @@
 
 O fluxo desktop está implementado com Device Flow. Ele pede somente `read:user` e lista repositórios públicos. O token não vai para o renderer nem para Supabase; é salvo com a proteção do sistema operacional.
 
-## Configuração que falta antes da release pública 0.9.1
+## Configuração do aplicativo
+
+O Client ID público fornecido pelo proprietário já está configurado em `desktop/integrations.json`. A autorização real da conta ainda precisa ser testada na prévia Windows.
 
 O proprietário precisa registrar um OAuth App em https://github.com/settings/applications/new:
 
 - Application name: `Happy Coding`
 - Homepage URL: `https://neurovendas.github.io/happy-coding/`
 - Application description: `Workspace e navegador para desenvolvedores e criadores de jogos.`
-- Authorization callback URL: `https://neurovendas.github.io/happy-coding/` (o campo é exigido no cadastro; este fluxo desktop não usa callback).
+- Redirect URI (também chamado Authorization callback URL): `https://neurovendas.github.io/happy-coding/` (este fluxo desktop não usa callback).
 - Depois de criar, habilitar **Enable Device Flow** e salvar.
+- Manter **Allow wildcard matching** desmarcado e **Expire user access tokens** marcado.
+
+Esta prévia solicita nova conexão quando o GitHub rejeita um token expirado (HTTP 401) e remove a cópia local. Ainda não há renovação automática por refresh token.
 
 Copiar apenas o **Client ID**, que é público, para `githubClientId` em `desktop/integrations.json`. Não gerar nem incluir Client Secret; este fluxo não precisa dele.
 

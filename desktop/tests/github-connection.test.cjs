@@ -38,3 +38,12 @@ test('unexpected verification destinations are rejected',async t=>{
   const c=setup(t,async()=>response({device_code:'x',user_code:'y',verification_uri:'https://evil.example'}));
   await assert.rejects(c.start(),/Device Flow/);assert.equal(c.state().pending,false);
 });
+test('expired authorization clears the saved token and requests reconnection',async t=>{
+  const c=setup(t,async()=>({ok:false,status:401}));
+  c.token='expired-test-token';c.profile={login:'developer'};
+  fs.writeFileSync(c.vaultPath,'encrypted-by-test-os');
+  await assert.rejects(c.repositories(),/expirou.*novamente/);
+  assert.equal(c.state().connected,false);
+  assert.equal(c.token,null);
+  assert.equal(fs.existsSync(c.vaultPath),false);
+});
