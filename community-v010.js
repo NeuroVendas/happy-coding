@@ -46,7 +46,15 @@ async function decoratePosts(){
     try{
       const client=await db();const {data:posts,error}=await client.from('hc_community_posts').select('author_id,author_name,title,created_at').in('title',titles).limit(100);if(error||!posts?.length)return;
       const ids=[...new Set(posts.map(p=>p.author_id))];const {data:profiles,error:profileError}=await client.rpc('hc_public_profiles_by_ids',{p_ids:ids});if(profileError)return;const profileMap=new Map((profiles||[]).map(p=>[p.user_id,p]));
-      for(const card of cards){const title=card.querySelector('h2')?.textContent?.trim();const authorText=(card.querySelector('header span')?.textContent||'').split(' · ')[0].trim();const post=posts.find(p=>p.title===title&&p.author_name===authorText);if(!post)continue;const profile=profileMap.get(post.author_id);const header=card.querySelector('header');if(header&&profile){const meta=el('span','hc-post-author-meta');if(profile.username)meta.append(el('span','hc-author-username',`@${profile.username}`));if(profile.verified)meta.append(verifiedBadge());if(meta.childNodes.length)header.insertBefore(meta,header.lastElementChild);}card.dataset.hcProfileDecorated='1';}
+      for(const card of cards){
+        const title=card.querySelector('h2')?.textContent?.trim();const visibleAuthor=card.querySelector('header > span:first-child')?.textContent?.trim()||'';
+        const matches=posts.filter(p=>p.title===title&&`${p.author_name} · ${new Date(p.created_at).toLocaleDateString('pt-BR')}`===visibleAuthor);
+        const authorIds=[...new Set(matches.map(p=>p.author_id).filter(Boolean))];
+        if(authorIds.length!==1)continue;
+        const profile=profileMap.get(authorIds[0]);const header=card.querySelector('header');
+        if(header&&profile){const meta=el('span','hc-post-author-meta');if(profile.username)meta.append(el('span','hc-author-username',`@${profile.username}`));if(profile.verified)meta.append(verifiedBadge());if(meta.childNodes.length)header.insertBefore(meta,header.lastElementChild);}
+        card.dataset.hcProfileDecorated='1';
+      }
     }catch{}
   },80);
 }
