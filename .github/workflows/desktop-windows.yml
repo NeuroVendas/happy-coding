@@ -9,7 +9,7 @@ on:
       - '.github/workflows/desktop-windows.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: happy-coding-windows-build
@@ -34,15 +34,54 @@ jobs:
         run: npm run check
       - name: Test desktop core
         run: npm test
+      - name: Read desktop version
+        shell: powershell
+        run: |
+          $version = node -p "require('./package.json').version"
+          "APP_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "RELEASE_TAG=v$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "Building Happy Coding v$version"
       - name: Build Windows x64 distributables
         run: npm run make:win
       - name: List distributables
         shell: powershell
         run: Get-ChildItem -Path out\make -Recurse -File | Select-Object FullName,Length
+      - name: Check whether release already exists
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$env:RELEASE_TAG" --repo NeuroVendas/happy-coding *> $null
+          if ($LASTEXITCODE -eq 0) {
+            "SHOULD_PUBLISH=false" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            Write-Host "$env:RELEASE_TAG already exists; keeping immutable release assets."
+          } else {
+            "SHOULD_PUBLISH=true" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            Write-Host "$env:RELEASE_TAG will be published."
+          }
+          exit 0
+      - name: Publish GitHub Release for auto-update
+        if: env.SHOULD_PUBLISH == 'true'
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $setup = "out\make\squirrel.windows\x64\HappyCoding-Setup.exe"
+          $nupkg = "out\make\squirrel.windows\x64\happy_coding-$env:APP_VERSION-full.nupkg"
+          $releases = "out\make\squirrel.windows\x64\RELEASES"
+          $portable = "out\make\zip\win32\x64\Happy Coding-win32-x64-$env:APP_VERSION.zip"
+          foreach ($file in @($setup,$nupkg,$releases,$portable)) {
+            if (-not (Test-Path $file)) { throw "Missing release asset: $file" }
+          }
+          gh release create "$env:RELEASE_TAG" $setup $nupkg $releases $portable `
+            --repo NeuroVendas/happy-coding `
+            --title "Happy Coding v$env:APP_VERSION" `
+            --generate-notes
+          if ($LASTEXITCODE -ne 0) { throw "GitHub Release publish failed" }
       - name: Upload Windows build
         uses: actions/upload-artifact@v4
         with:
-          name: Happy-Coding-Windows-v0.8.0
+          name: Happy-Coding-Windows-v${{ env.APP_VERSION }}
           path: desktop/out/make/**/*
           if-no-files-found: error
           retention-days: 30
