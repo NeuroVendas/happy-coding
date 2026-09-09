@@ -7,9 +7,24 @@ const EXPECTED_FORGE='7.11.2';
 const EXPECTED_PACKAGER='20.0.1';
 const MARKER='HC_PACKAGER20_COMPAT_V1';
 const root=__dirname;
-const forgeRoot=path.join(root,'node_modules','@electron-forge','core');
-const packagerRoot=path.join(root,'node_modules','@electron','packager');
-const target=path.join(forgeRoot,'dist','api','package.js');
+
+function findPackageRoot(name,searchPaths){
+  const entry=require.resolve(name,{paths:searchPaths});
+  let dir=path.dirname(entry);
+  while(true){
+    const manifest=path.join(dir,'package.json');
+    if(fs.existsSync(manifest)){
+      try{
+        const json=JSON.parse(fs.readFileSync(manifest,'utf8'));
+        if(json.name===name)return dir;
+      }catch{}
+    }
+    const parent=path.dirname(dir);
+    if(parent===dir)break;
+    dir=parent;
+  }
+  throw new Error(`Could not resolve package root for ${name}.`);
+}
 
 function packageVersion(dir){
   return JSON.parse(fs.readFileSync(path.join(dir,'package.json'),'utf8')).version;
@@ -54,6 +69,9 @@ function patchSource(source){
 }
 
 function main(){
+  const forgeRoot=findPackageRoot('@electron-forge/core',[root]);
+  const packagerRoot=findPackageRoot('@electron/packager',[forgeRoot,root]);
+  const target=path.join(forgeRoot,'dist','api','package.js');
   if(!fs.existsSync(target))throw new Error(`Forge package implementation not found: ${target}`);
   const forgeVersion=packageVersion(forgeRoot);
   const packagerVersion=packageVersion(packagerRoot);
@@ -70,4 +88,4 @@ function main(){
 }
 
 if(require.main===module)main();
-module.exports={patchSource,EXPECTED_FORGE,EXPECTED_PACKAGER,MARKER};
+module.exports={patchSource,findPackageRoot,EXPECTED_FORGE,EXPECTED_PACKAGER,MARKER};
