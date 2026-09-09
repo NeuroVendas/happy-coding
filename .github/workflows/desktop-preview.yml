@@ -5,6 +5,7 @@ on:
       - 'desktop/**'
       - '*.js'
       - '*.css'
+      - '*.html'
       - '*.svg'
       - 'tests/**'
       - 'backend/**'
@@ -54,6 +55,26 @@ jobs:
           if (-not $answer.reply) { throw 'search-mode AI returned no answer' }
           if ($answer.safety -eq $true) { throw 'search-mode AI was unexpectedly safety-blocked' }
           Write-Host "Search-to-AI smoke OK using model $($answer.model)"
+      - name: Smoke isolated v0.10 web stage
+        if: github.event.pull_request.number == 4
+        shell: pwsh
+        run: |
+          $base = 'https://neurovendas.github.io/happy-coding/preview-v010/'
+          $page = Invoke-WebRequest -Uri $base -UseBasicParsing -TimeoutSec 30
+          if ($page.StatusCode -ne 200) { throw "v0.10 preview page returned HTTP $($page.StatusCode)" }
+          $html = [string]$page.Content
+          foreach ($marker in @('Happy Coding =]','sync-hook.js','community.js','safety-ui.js')) {
+            if (-not $html.Contains($marker)) { throw "v0.10 preview page is missing marker: $marker" }
+          }
+          $sync = Invoke-WebRequest -Uri "${base}sync-hook.js" -UseBasicParsing -TimeoutSec 30
+          if ($sync.StatusCode -ne 200) { throw "v0.10 sync hook returned HTTP $($sync.StatusCode)" }
+          $syncText = [string]$sync.Content
+          foreach ($marker in @('search-v010.js','cloud-ai.js','v010-cleanup.js','community-v010.js')) {
+            if (-not $syncText.Contains($marker)) { throw "deployed v0.10 sync hook is missing marker: $marker" }
+          }
+          $icon = Invoke-WebRequest -Uri "${base}icon.svg" -UseBasicParsing -TimeoutSec 30
+          if (-not ([string]$icon.Content).Contains('#b7f34a')) { throw 'deployed v0.10 icon is not the green Happy Coding identity' }
+          Write-Host 'Isolated v0.10 web stage is live and contains the expected modules.'
       - name: Install locked desktop dependencies
         working-directory: desktop
         run: npm ci --no-audit --no-fund
