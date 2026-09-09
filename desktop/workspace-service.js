@@ -51,6 +51,22 @@ function createWorkspaceService({userData,getTabs,openUrl}){
       child.once('spawn',()=>{child.unref();resolve();});
     });return true;
   }
+  function openSavedResources(p){
+    let openedRepository=false,openedLinks=0;
+    const repo=repository(p.repository);
+    if(repo){openUrl(repo);openedRepository=true;}
+    for(const url of p.links){openUrl(url);openedLinks++;}
+    return{openedRepository,openedLinks};
+  }
+  async function resume(id){
+    const p=project(id);const opened=openSavedResources(p);
+    let godotAvailable=!!store.godotExecutable&&!!p.godotProject,godotStarted=false;
+    if(godotAvailable)godotStarted=await launch(id);
+    return{...opened,godotAvailable,godotStarted};
+  }
+  function issueUrl(raw){
+    try{const u=new URL(String(raw||'').trim());if(u.protocol!=='https:'||u.hostname!=='github.com'||u.username||u.password)return'';if(!/^\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/issues\/\d+\/?$/.test(u.pathname))return'';u.search='';u.hash='';return u.href;}catch{return'';}
+  }
   const actions={
     state:()=>snapshot(),
     create:values=>{if(store.projects.length>=MAX_PROJECTS)throw new Error('Limite de 100 projetos atingido.');return persist({...store,projects:[newProject(values?.name),...store.projects]});},
@@ -60,15 +76,18 @@ function createWorkspaceService({userData,getTabs,openUrl}){
     unlinkGodot:()=>persist({...store,godotExecutable:''}),
     chooseProject:values=>chooseProject(values?.id),
     launch:values=>launch(values?.id),
+    resume:values=>resume(values?.id),
     tabs:()=>getTabs().slice(0,20),
     openLinks:values=>{const p=project(values?.id);for(const url of p.links)openUrl(url);return true;},
     openRepository:values=>{const url=repository(project(values?.id).repository);if(!url)throw new Error('Vincule um repositório GitHub primeiro.');openUrl(url);return true;},
+    openIssue:values=>{const url=issueUrl(values?.url);if(!url)throw new Error('Link de issue inválido.');openUrl(url);return true;},
     connectGitHub:()=>github.start(),
     cancelGitHub:()=>{github.cancel();return snapshot();},
     disconnectGitHub:()=>{github.forget();return snapshot();},
     githubBrowser:()=>shell.openExternal('https://github.com/login/device'),
     githubPermissions:()=>shell.openExternal('https://github.com/settings/applications'),
-    repositories:values=>github.repositories(values?.page)
+    repositories:values=>github.repositories(values?.page),
+    issues:values=>github.issues(project(values?.id).repository)
   };
   ipcMain.handle('hc:workspace',async(event,action,values)=>{
     if(!window||event.sender!==window.webContents||event.senderFrame!==window.webContents.mainFrame||event.senderFrame.url!==entry)return{ok:false,error:'Acesso negado.'};
