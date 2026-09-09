@@ -11,6 +11,10 @@ const chrome=readFileSync(resolve(desktop,'chrome.js'),'utf8');
 const preload=readFileSync(resolve(desktop,'preload.js'),'utf8');
 const main=readFileSync(resolve(desktop,'main.js'),'utf8');
 const webControls=readFileSync(resolve(root,'browser-controls.js'),'utf8');
+const forge=readFileSync(resolve(desktop,'forge.config.js'),'utf8');
+const pkg=JSON.parse(readFileSync(resolve(desktop,'package.json'),'utf8'));
+const iconBuilder=readFileSync(resolve(desktop,'build-icon.js'),'utf8');
+const brandIcon=readFileSync(resolve(root,'icon.svg'),'utf8');
 
 function hasIdReference(id){
   return chrome.includes(`getElementById('${id}')`)||chrome.includes(`getElementById("${id}")`);
@@ -45,6 +49,17 @@ test('projects entry is discoverable instead of an unlabeled square',()=>{
   assert.match(html,/id="workspacesBtn"[^>]*>▱ Projetos<\/button>/);
   assert.ok(html.includes('.workspace-toggle{width:auto!important;min-width:104px'),'projects control should be a visible labeled action');
   assert.ok(chrome.includes("getElementById('workspacesBtn').addEventListener('click',()=>window.happyDesktop.openWorkspaces())"));
+});
+
+test('Windows build generates and embeds the green Happy Coding face instead of Electron atom',()=>{
+  assert.equal(pkg.version,'0.10.0');
+  assert.ok(pkg.scripts['make:win'].startsWith('node build-icon.js &&'));
+  assert.equal(pkg.devDependencies['svg-to-ico'],'2.0.0');
+  assert.ok(iconBuilder.includes("'..','icon.svg'"));
+  assert.ok(iconBuilder.includes("'happy-coding.ico'"));
+  assert.ok(forge.includes('icon\n  },')||forge.includes('icon\r\n  },'));
+  assert.ok(forge.includes('setupIcon:icon'));
+  assert.ok(brandIcon.includes('#b7f34a')&&brandIcon.includes('=]'));
 });
 
 test('new windows from websites become internal Happy Coding tabs',()=>{
