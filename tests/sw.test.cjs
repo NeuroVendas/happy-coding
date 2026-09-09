@@ -6,7 +6,7 @@ const vm = require('node:vm');
 
 const scope = 'https://neurovendas.github.io/happy-coding/';
 const prefix = `happy-coding:${scope}:`;
-const current = `${prefix}v13`;
+const current = `${prefix}v14`;
 const source = readFileSync(resolve(__dirname, '../sw.js'), 'utf8');
 
 function worker() {
@@ -31,7 +31,7 @@ function worker() {
           if (state.installError) throw Error('precache failed');
           for (const request of requests) entries.set(key(request), new Response(key(request)));
         },
-        match: async request => entries.get(key(request))?.clone()
+        match: async request => entries.get(key(request)?.clone ? key(request) : key(request))?.clone()
       };
     }
   };
