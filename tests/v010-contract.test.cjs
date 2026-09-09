@@ -15,6 +15,9 @@ const supabaseConfig=read('supabase/config.toml');
 const aiEdge=read('edge-functions/ai-chat/index.ts');
 const searchEdge=read('edge-functions/web-search/index.ts');
 const apiLimitSql=read('backend/global-ai-rate-limit-v010.sql');
+const desktopLock=JSON.parse(read('desktop/package-lock.json'));
+const previewWorkflow=read('.github/workflows/desktop-preview.yml');
+const releaseWorkflow=read('.github/workflows/desktop-windows.yml');
 
 test('v0.10 bootstrap loads replacement behavior before legacy app handlers',()=>{
   for(const file of ['search-v010.js','cloud-ai.js','v010-cleanup.js','community-v010.js'])assert.ok(sync.includes(file),file);
@@ -85,6 +88,17 @@ test('public search uses the same backend-only global quota guard',()=>{
   assert.ok(searchEdge.includes('happy-coding-search:'));
   assert.ok(searchEdge.includes("{name:'HMAC',hash:'SHA-256'}"));
   assert.ok(searchEdge.includes("error:'search_guard_unavailable'"));
+});
+
+test('desktop dependency graph is locked and both Windows workflows use npm ci',()=>{
+  assert.equal(desktopLock.lockfileVersion,3);
+  assert.equal(desktopLock.name,'happy-coding-desktop');
+  assert.equal(desktopLock.version,'0.10.0');
+  for(const workflow of [previewWorkflow,releaseWorkflow]){
+    assert.match(workflow,/npm ci --no-audit --no-fund/);
+    assert.equal(/npm install --no-audit --no-fund/.test(workflow),false);
+  }
+  assert.match(previewWorkflow,/permissions:\s*\n\s*contents:\s*read/);
 });
 
 test('legacy v0.0.1 example projects are removed from the visible experience',()=>{
