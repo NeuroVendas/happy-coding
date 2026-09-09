@@ -73,6 +73,18 @@ jobs:
       - name: Run desktop tests
         working-directory: desktop
         run: npm test
+      - name: Point preview build at isolated v0.10 web stage
+        working-directory: desktop
+        shell: pwsh
+        run: |
+          $path = 'browser-core.js'
+          $source = Get-Content $path -Raw
+          $stable = "const HOME='https://neurovendas.github.io/happy-coding/';"
+          $preview = "const HOME='https://neurovendas.github.io/happy-coding/preview-v010/';"
+          if (-not $source.Contains($stable)) { throw 'Stable HOME constant was not found; refusing preview rewrite.' }
+          Set-Content -Path $path -Value $source.Replace($stable,$preview) -NoNewline
+          $check = Get-Content $path -Raw
+          if (-not $check.Contains($preview)) { throw 'Preview HOME rewrite failed.' }
       - name: Package Windows preview
         working-directory: desktop
         run: npm run make:win
