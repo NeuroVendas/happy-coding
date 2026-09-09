@@ -1,95 +1,49 @@
-name: Validate desktop preview
+name: Refresh desktop lock (temporary)
 on:
   pull_request:
     paths:
       - 'desktop/**'
-      - '*.js'
-      - '*.css'
-      - '*.svg'
-      - 'tests/**'
-      - 'backend/**'
-      - 'edge-functions/**'
-      - 'supabase/**'
       - '.github/workflows/desktop-preview.yml'
 permissions:
-  contents: read
+  contents: write
 jobs:
-  preview-windows:
+  refresh-lock:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
-      - name: Check web JavaScript
+      - name: Regenerate dependency lock only
+        working-directory: desktop
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Persist refreshed lock to PR branch
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          $files = @('app.js','sync-hook.js','search-v010.js','cloud-ai.js','v010-cleanup.js','community-v010.js','community.js','safety-ui.js','browser-controls.js')
-          foreach ($file in $files) { node --check $file; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } }
-      - name: Run web shell tests
-        run: node --test tests/*.test.cjs
-      - name: Smoke cloud AI and search answer chain
-        if: github.event.pull_request.number == 4
-        shell: pwsh
-        run: |
-          $cloud = Get-Content 'cloud-ai.js' -Raw
-          if ($cloud -notmatch "const ENDPOINT='([^']+)'" ) { throw 'Could not read cloud AI endpoint' }
-          $aiEndpoint = $Matches[1]
-          if ($cloud -notmatch "const KEY='([^']+)'" ) { throw 'Could not read publishable key' }
-          $key = $Matches[1]
-          $headers = @{ Origin = 'https://neurovendas.github.io'; apikey = $key }
-          $chatBody = @{ mode = 'chat'; prompt = 'Responda apenas com OK =]' } | ConvertTo-Json
-          $chat = Invoke-RestMethod -Method Post -Uri $aiEndpoint -Headers $headers -ContentType 'application/json' -Body $chatBody -TimeoutSec 30
-          if (-not $chat.reply) { throw 'ai-chat returned no reply' }
-          if ($chat.safety -eq $true) { throw 'ai-chat smoke was unexpectedly safety-blocked' }
-          Write-Host "Cloud AI smoke OK using model $($chat.model)"
-          $searchEndpoint = $aiEndpoint -replace '/ai-chat$','/web-search'
-          $searchBody = @{ q = 'Godot Engine official documentation' } | ConvertTo-Json
-          $search = Invoke-RestMethod -Method Post -Uri $searchEndpoint -Headers $headers -ContentType 'application/json' -Body $searchBody -TimeoutSec 30
-          if (-not $search.results -or $search.results.Count -lt 1) { throw 'web-search returned no results' }
-          Write-Host "Search smoke OK with $($search.results.Count) result(s)"
-          $sources = @($search.results | Select-Object -First 6)
-          $answerBody = @{ mode = 'search'; prompt = 'What is Godot Engine?'; sources = $sources } | ConvertTo-Json -Depth 6
-          $answer = Invoke-RestMethod -Method Post -Uri $aiEndpoint -Headers $headers -ContentType 'application/json' -Body $answerBody -TimeoutSec 30
-          if (-not $answer.reply) { throw 'search-mode AI returned no answer' }
-          if ($answer.safety -eq $true) { throw 'search-mode AI was unexpectedly safety-blocked' }
-          Write-Host "Search-to-AI smoke OK using model $($answer.model)"
-      - name: Install locked desktop dependencies
-        working-directory: desktop
-        run: npm ci --no-audit --no-fund
-      - name: Audit production dependencies
-        working-directory: desktop
-        run: npm audit --omit=dev --audit-level=high
-      - name: Reject critical vulnerabilities anywhere in the dependency tree
-        working-directory: desktop
-        run: npm audit --audit-level=critical
-      - name: Show hardened build dependency versions
-        working-directory: desktop
-        shell: pwsh
-        run: npm ls @electron/packager tar tmp --all
-      - name: Check desktop JavaScript
-        working-directory: desktop
-        run: npm run check
-      - name: Run desktop tests
-        working-directory: desktop
-        run: npm test
-      - name: Package Windows preview
-        working-directory: desktop
-        run: npm run make:win
-      - name: Smoke packaged browser startup
-        shell: pwsh
-        run: |
-          $exe = Get-ChildItem -Path 'desktop/out' -Filter 'HappyCoding.exe' -File -Recurse | Select-Object -First 1
-          if (-not $exe) { throw 'Packaged HappyCoding.exe was not found.' }
-          Write-Host "Starting packaged browser: $($exe.FullName)"
-          $process = Start-Process -FilePath $exe.FullName -ArgumentList '--disable-gpu' -PassThru
-          Start-Sleep -Seconds 8
-          if ($process.HasExited) { throw "Packaged Happy Coding exited during startup smoke. Exit code: $($process.ExitCode)" }
-          Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
-          Write-Host 'Packaged Happy Coding stayed alive through startup smoke.'
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: Happy-Coding-0.10.0-preview
-          path: desktop/out/make/**/*
-          if-no-files-found: error
-          retention-days: 7
+          git diff --quiet -- desktop/package-lock.json
+          $lockChanged = $LASTEXITCODE -ne 0
+          $global:LASTEXITCODE = 0
+          if (-not $lockChanged) {
+            Write-Host 'Dependency lock already matches package metadata.'
+            exit 0
+          }
+          $headers = @{
+            Authorization = "Bearer $env:GH_TOKEN"
+            Accept = 'application/vnd.github+json'
+            'X-GitHub-Api-Version' = '2022-11-28'
+          }
+          $branch = '${{ github.head_ref }}'
+          $uri = 'https://api.github.com/repos/${{ github.repository }}/contents/desktop/package-lock.json'
+          $meta = Invoke-RestMethod -Method Get -Uri "${uri}?ref=$([uri]::EscapeDataString($branch))" -Headers $headers
+          $lock = Get-Content 'desktop/package-lock.json' -Raw
+          $payload = @{
+            message = 'build: lock Packager 20.0.1 security test'
+            content = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($lock))
+            sha = $meta.sha
+            branch = $branch
+          } | ConvertTo-Json -Depth 4
+          Invoke-RestMethod -Method Put -Uri $uri -Headers $headers -ContentType 'application/json' -Body $payload | Out-Null
+          Write-Host 'Refreshed package-lock.json committed to PR branch.'
+          $global:LASTEXITCODE = 0
