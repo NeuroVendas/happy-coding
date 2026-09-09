@@ -1,0 +1,27 @@
+/* Correções de fidelidade ao protótipo original do Happy Coding =] */
+.app-shell{background:#0b0e13}
+.browser-chrome{box-shadow:none}
+.tabs-row{padding-right:14px}
+.tabs-row .tab{min-width:170px}
+.tabs-row .tab:not(.active){background:#171e27;border-bottom-color:#171e27;color:#aeb9c4}
+.godot-dot{background:#202638;color:#aebaff}
+.profile-chip{height:40px;display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid #2c3745;border-radius:10px;background:#151c25;color:#dce6ee}
+.profile-chip span{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#273543;color:#cfe7f1;font-size:10px;font-weight:900}
+.profile-chip small{font-size:11px;white-space:nowrap;color:#9aa8b5}
+.original-hero{padding-top:28px;padding-bottom:24px}
+.greeting-line{margin:0 0 8px;color:#91a0ad;font-size:13px}
+.original-section-head{margin-top:34px}
+.original-section-head .section-kicker{margin-bottom:0}
+.project-symbol{display:grid;place-items:center;width:30px;height:30px;border-radius:8px;background:#1c2b36;color:#7ed1ee;font:900 11px ui-monospace,monospace}
+.project-menu{color:#657483;font-weight:900;letter-spacing:.08em}
+.project-card .tech-pill{align-self:flex-start;margin-top:14px}
+.project-card h3{margin-top:12px}
+.new-project-card{justify-content:center;border-style:dashed;background:#10161e}
+.new-project-card:hover{background:#131b24}
+.new-project-plus{display:grid;place-items:center;width:36px;height:36px;border-radius:10px;background:#18232d;color:#78cae7;font-size:20px;font-weight:400}
+.new-project-card footer{width:100%}
+.new-project-card footer button{padding:0}
+.recent-projects button{display:flex;justify-content:space-between;gap:8px}
+.recent-projects button span{color:#596978}
+.mascot-button{border-radius:16px}
+@media(max-width:760px){.profile-chip small{display:none}.tabs-row .tab:nth-child(2){display:none}}

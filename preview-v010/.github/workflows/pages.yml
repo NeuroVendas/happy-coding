@@ -1,0 +1,92 @@
+name: Deploy Happy Coding to Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Check JavaScript syntax
+        run: |
+          node --check app.js
+          node --check browser-controls.js
+          node --check community.js
+          node --check safety-ui.js
+          node --check account-sync.js
+          node --check account-entry.js
+          node --check public-feed.js
+          node --check sync-hook.js
+          node --check ai-local.js
+          node --input-type=module --check < account.js
+          node --input-type=module --check < admin.js
+          node --check desktop/bootstrap.js
+          node --check desktop/main.js
+          node --check desktop/preload.js
+          node --check desktop/chrome.js
+          node --check desktop/browser-core.js
+          node --check desktop/download-core.js
+          node --check desktop/library-core.js
+          node --check desktop/session-core.js
+          node --check desktop/search-core.js
+          node --check desktop/search.js
+          node --check desktop/forge.config.js
+      - name: Check web shell behavior
+        run: node --test tests/*.test.cjs
+      - name: Check desktop browser core
+        run: node --test desktop/tests/*.test.cjs
+      - name: Smoke test live web search
+        env:
+          SEARCH_URL: https://vzfnoaixjgyifutklpwn.supabase.co/functions/v1/web-search
+          SEARCH_KEY: sb_publishable_nQTrMmVzLt0b1t0y-Ob22g_UwF1eNDD
+        run: |
+          set -euo pipefail
+          status=$(curl -sS --retry 2 --retry-delay 2 --max-time 40 \
+            -X POST "$SEARCH_URL" \
+            -H 'content-type: application/json' \
+            -H "apikey: $SEARCH_KEY" \
+            -H 'origin: https://neurovendas.github.io' \
+            --data '{"q":"minecraft"}' \
+            -o /tmp/happy-search.json \
+            -w '%{http_code}')
+          cat /tmp/happy-search.json
+          echo
+          echo "HTTP $status"
+          test "$status" = "200"
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          payload=json.loads(Path('/tmp/happy-search.json').read_text())
+          results=payload.get('results')
+          assert isinstance(results,list) and results, payload
+          for item in results[:3]:
+              assert isinstance(item,dict), item
+              assert str(item.get('title','')).strip(), item
+              assert str(item.get('url','')).startswith(('http://','https://')), item
+          print(f"live search ok: {len(results)} result(s)")
+          PY
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

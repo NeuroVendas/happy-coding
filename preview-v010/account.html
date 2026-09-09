@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0b0e13">
+  <title>Conta · Happy Coding =]</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="restored-theme.css">
+  <style>
+    body{min-height:100vh;background:#0b0e13}.account-page{max-width:920px;margin:auto;padding:34px 22px 80px}.account-top{display:flex;justify-content:space-between;gap:18px;align-items:center;margin-bottom:24px}.account-top a,.account-links a{color:#b7f34a;text-decoration:none}.account-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.account-card{border:1px solid #33402d;border-radius:16px;background:#111710;padding:18px}.account-card.wide{grid-column:1/-1}.account-card h2{margin:0 0 8px}.account-card p,.account-card small{color:#b7c0c9;line-height:1.55}.account-card label{display:block;margin:12px 0}.account-card input{width:100%;box-sizing:border-box;margin-top:6px;padding:11px;border-radius:9px;border:1px solid #435337;background:#0d120b;color:#fff}.account-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.account-status{min-height:22px;color:#b7f34a}.danger{border-color:#6e3434}.danger .danger-btn{background:#482020;color:#fff;border:1px solid #7b3e3e;border-radius:9px;padding:10px 14px}.qr{display:block;width:min(220px,70vw);background:#fff;padding:8px;border-radius:10px;margin:12px 0}.secret{display:block;word-break:break-all;background:#080b08;border-radius:8px;padding:10px;margin:8px 0}.hidden{display:none!important}@media(max-width:700px){.account-grid{grid-template-columns:1fr}.account-card.wide{grid-column:auto}.account-top{align-items:flex-start;flex-direction:column}}
+  </style>
+</head>
+<body>
+<main class="account-page">
+  <div class="account-top"><div><span class="section-kicker">HAPPY CODING =]</span><h1>Conta e segurança</h1><p>Seu login, perfil, proteção e sincronização ficam aqui — não dependem da Comunidade.</p></div><a href="./">← Voltar ao Happy Coding</a></div>
+  <p id="accountStatus" class="account-status" role="status">Verificando sua sessão…</p>
+
+  <section id="signedOut" class="account-grid hidden">
+    <article class="account-card wide"><h2>Entrar ou criar conta</h2><p>Você continua podendo explorar sem conta. Entre para sincronizar dados e participar da comunidade.</p><form id="authForm"><label>E-mail<input id="email" type="email" autocomplete="email" required maxlength="254"></label><label>Senha<input id="password" type="password" autocomplete="current-password" required minlength="8" maxlength="128"></label><div class="account-actions"><button class="primary-btn" type="submit">Entrar</button><button class="secondary-btn" id="signupBtn" type="button">Criar conta</button><button class="secondary-btn" id="resetBtn" type="button">Esqueci a senha</button></div></form><p id="authStatus" class="account-status"></p></article>
+  </section>
+
+  <section id="signedIn" class="account-grid hidden">
+    <article class="account-card"><h2>Identidade</h2><p id="emailState"></p><form id="profileForm"><label>Nome exibido<input id="displayName" maxlength="80" placeholder="Seu nome"></label><button class="primary-btn" type="submit">Salvar perfil</button></form><p id="profileStatus" class="account-status"></p></article>
+    <article class="account-card"><h2>Segurança</h2><p id="mfaState">Verificando MFA…</p><div id="mfaSetup"></div><div class="account-actions"><button class="secondary-btn" id="mfaBtn" type="button">Gerenciar MFA</button></div><p id="mfaStatus" class="account-status"></p></article>
+    <article class="account-card"><h2>Sincronização</h2><p>Perfil, favoritos, projetos e notas de projeto podem acompanhar sua conta quando a sincronização está ativada. Histórico continua local.</p><div class="account-actions"><button class="secondary-btn" id="syncToggle" type="button"></button></div><p id="syncStatus" class="account-status"></p></article>
+    <article class="account-card"><h2>Sessão</h2><p>Sua sessão permanece neste navegador mesmo depois de fechar o Happy Coding, até você usar “Sair da conta”. Em computador compartilhado, sempre saia ao terminar.</p><div class="account-actions"><button class="secondary-btn" id="logoutBtn" type="button">Sair da conta</button><a class="secondary-btn hidden" id="adminLink" href="admin.html">Painel Admin</a></div></article>
+    <article class="account-card wide account-links"><h2>Privacidade e regras</h2><p><a href="privacy.html">Privacidade</a> · <a href="community-guidelines.html">Regras da comunidade</a></p></article>
+    <article class="account-card wide danger"><h2>Excluir conta</h2><p>Essa ação é permanente. Para confirmar, digite <strong>EXCLUIR</strong>.</p><label>Confirmação<input id="deleteConfirm" autocomplete="off"></label><button class="danger-btn" id="deleteAccount" type="button">Excluir minha conta</button><p id="deleteStatus" class="account-status"></p></article>
+  </section>
+</main>
+<script type="module" src="account.js"></script>
+</body>
+</html>
