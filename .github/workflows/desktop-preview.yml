@@ -12,7 +12,7 @@ on:
       - 'supabase/**'
       - '.github/workflows/desktop-preview.yml'
 permissions:
-  contents: read
+  contents: write
 jobs:
   preview-windows:
     runs-on: windows-latest
@@ -21,6 +21,23 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
+      - name: Refresh dependency lock if package metadata changed
+        working-directory: desktop
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Commit refreshed lock to PR branch
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if (-not (git diff --quiet -- desktop/package-lock.json)) {
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add desktop/package-lock.json
+            git commit -m 'build: refresh locked security overrides'
+            git push origin "HEAD:${{ github.head_ref }}"
+          } else {
+            Write-Host 'Dependency lock already matches package metadata.'
+          }
       - name: Check web JavaScript
         shell: pwsh
         run: |
@@ -38,19 +55,16 @@ jobs:
           if ($cloud -notmatch "const KEY='([^']+)'" ) { throw 'Could not read publishable key' }
           $key = $Matches[1]
           $headers = @{ Origin = 'https://neurovendas.github.io'; apikey = $key }
-
           $chatBody = @{ mode = 'chat'; prompt = 'Responda apenas com OK =]' } | ConvertTo-Json
           $chat = Invoke-RestMethod -Method Post -Uri $aiEndpoint -Headers $headers -ContentType 'application/json' -Body $chatBody -TimeoutSec 30
           if (-not $chat.reply) { throw 'ai-chat returned no reply' }
           if ($chat.safety -eq $true) { throw 'ai-chat smoke was unexpectedly safety-blocked' }
           Write-Host "Cloud AI smoke OK using model $($chat.model)"
-
           $searchEndpoint = $aiEndpoint -replace '/ai-chat$','/web-search'
           $searchBody = @{ q = 'Godot Engine official documentation' } | ConvertTo-Json
           $search = Invoke-RestMethod -Method Post -Uri $searchEndpoint -Headers $headers -ContentType 'application/json' -Body $searchBody -TimeoutSec 30
           if (-not $search.results -or $search.results.Count -lt 1) { throw 'web-search returned no results' }
           Write-Host "Search smoke OK with $($search.results.Count) result(s)"
-
           $sources = @($search.results | Select-Object -First 6)
           $answerBody = @{ mode = 'search'; prompt = 'What is Godot Engine?'; sources = $sources } | ConvertTo-Json -Depth 6
           $answer = Invoke-RestMethod -Method Post -Uri $aiEndpoint -Headers $headers -ContentType 'application/json' -Body $answerBody -TimeoutSec 30
@@ -83,9 +97,7 @@ jobs:
           Write-Host "Starting packaged browser: $($exe.FullName)"
           $process = Start-Process -FilePath $exe.FullName -ArgumentList '--disable-gpu' -PassThru
           Start-Sleep -Seconds 8
-          if ($process.HasExited) {
-            throw "Packaged Happy Coding exited during startup smoke. Exit code: $($process.ExitCode)"
-          }
+          if ($process.HasExited) { throw "Packaged Happy Coding exited during startup smoke. Exit code: $($process.ExitCode)" }
           Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
           Write-Host 'Packaged Happy Coding stayed alive through startup smoke.'
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
