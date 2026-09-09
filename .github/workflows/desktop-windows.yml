@@ -42,7 +42,7 @@ jobs:
       - name: Upload Windows build
         uses: actions/upload-artifact@v4
         with:
-          name: Happy-Coding-Windows-v0.7.0
+          name: Happy-Coding-Windows-v0.8.0
           path: desktop/out/make/**/*
           if-no-files-found: error
           retention-days: 30
