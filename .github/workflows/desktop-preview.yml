@@ -9,6 +9,7 @@ on:
       - 'tests/**'
       - 'backend/**'
       - 'edge-functions/**'
+      - 'supabase/**'
       - '.github/workflows/desktop-preview.yml'
 permissions:
   contents: read
@@ -27,6 +28,21 @@ jobs:
           foreach ($file in $files) { node --check $file; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } }
       - name: Run web shell tests
         run: node --test tests/*.test.cjs
+      - name: Smoke cloud AI endpoint
+        if: github.event.pull_request.number == 4
+        shell: pwsh
+        run: |
+          $cloud = Get-Content 'cloud-ai.js' -Raw
+          if ($cloud -notmatch "const ENDPOINT='([^']+)'" ) { throw 'Could not read cloud AI endpoint' }
+          $endpoint = $Matches[1]
+          if ($cloud -notmatch "const KEY='([^']+)'" ) { throw 'Could not read publishable key' }
+          $key = $Matches[1]
+          $headers = @{ Origin = 'https://neurovendas.github.io'; apikey = $key }
+          $body = @{ mode = 'chat'; prompt = 'Responda apenas com OK =]' } | ConvertTo-Json
+          $result = Invoke-RestMethod -Method Post -Uri $endpoint -Headers $headers -ContentType 'application/json' -Body $body -TimeoutSec 30
+          if (-not $result.reply) { throw 'ai-chat returned no reply' }
+          if ($result.safety -eq $true) { throw 'ai-chat smoke was unexpectedly safety-blocked' }
+          Write-Host "Cloud AI smoke OK using model $($result.model)"
       - name: Install desktop dependencies
         working-directory: desktop
         run: npm install --no-audit --no-fund
