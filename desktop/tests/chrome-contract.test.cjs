@@ -32,7 +32,7 @@ test('core tab and navigation controls cross the isolated preload bridge',()=>{
 });
 
 test('new windows from websites become internal Happy Coding tabs',()=>{
-  assert.match(main,/setWindowOpenHandler\(\(\{url\}\)=>\{createTab\(url,true\);return\{action:'deny'\}\}\)/);
+  assert.ok(main.includes("wc.setWindowOpenHandler(({url})=>{createTab(url,true);return{action:'deny'};});"));
 });
 
 test('closed tabs have both visible and keyboard restoration paths',()=>{
