@@ -34,6 +34,8 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
       - name: Reject critical vulnerabilities anywhere in the dependency tree
         run: npm audit --audit-level=critical
+      - name: Show hardened build dependency versions
+        run: npm ls @electron/packager tar tmp --all
       - name: Check desktop JavaScript
         run: npm run check
       - name: Test desktop core
@@ -47,6 +49,18 @@ jobs:
           Write-Host "Building Happy Coding v$version"
       - name: Build Windows x64 distributables
         run: npm run make:win
+      - name: Smoke packaged browser startup before release
+        shell: powershell
+        working-directory: .
+        run: |
+          $exe = Get-ChildItem -Path 'desktop/out' -Filter 'HappyCoding.exe' -File -Recurse | Select-Object -First 1
+          if (-not $exe) { throw 'Packaged HappyCoding.exe was not found.' }
+          Write-Host "Starting packaged browser: $($exe.FullName)"
+          $process = Start-Process -FilePath $exe.FullName -ArgumentList '--disable-gpu' -PassThru
+          Start-Sleep -Seconds 8
+          if ($process.HasExited) { throw "Packaged Happy Coding exited during startup smoke. Exit code: $($process.ExitCode)" }
+          Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+          Write-Host 'Packaged Happy Coding stayed alive through startup smoke.'
       - name: List distributables
         shell: powershell
         run: Get-ChildItem -Path out\make -Recurse -File | Select-Object FullName,Length
