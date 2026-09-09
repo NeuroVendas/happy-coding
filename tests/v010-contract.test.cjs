@@ -41,7 +41,7 @@ test('public edge functions use publishable-key auth without pretending it is a 
   assert.match(supabaseConfig,/\[functions\.ai-chat\][\s\S]*verify_jwt\s*=\s*false/);
   assert.match(supabaseConfig,/\[functions\.web-search\][\s\S]*verify_jwt\s*=\s*false/);
   for(const source of [aiEdge,searchEdge]){
-    assert.ok(source.includes("req.headers.get('apikey')!==PUBLIC_KEY"));
+    assert.match(source,/req\.headers\.get\('apikey'\)\s*!==\s*PUBLIC_KEY/);
     assert.ok(source.includes("ALLOWED_ORIGIN='https://neurovendas.github.io'")||source.includes("ALLOWED_ORIGIN = 'https://neurovendas.github.io'"));
   }
   assert.ok(cloud.includes("'apikey':KEY"));
