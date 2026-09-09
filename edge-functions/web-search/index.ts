@@ -148,12 +148,53 @@ function parseDuck(html: string) {
   }
   return unique(out);
 }
+function requestIp(req: Request) {
+  return (req.headers.get('cf-connecting-ip') || req.headers.get('x-real-ip') || (req.headers.get('x-forwarded-for') || '').split(',')[0] || 'unknown').trim().slice(0, 80);
+}
 function rateLimited(req: Request) {
   const now = Date.now();
-  const ip = (req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || 'unknown').split(',')[0].trim().slice(0, 80);
+  const ip = requestIp(req);
   const current = buckets.get(ip);
   if (!current || current.resetAt <= now) { buckets.set(ip, { count: 1, resetAt: now + WINDOW_MS }); return false; }
   current.count += 1; return current.count > RATE_LIMIT;
+}
+function backendKey() {
+  try {
+    const modern=JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS')||'{}');
+    const key=modern?.default||Object.values(modern||{})[0];
+    if(typeof key==='string'&&key)return key;
+  } catch {}
+  return Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||'';
+}
+function backendHeaders(service:string) {
+  const headers:Record<string,string>={'Content-Type':'application/json','apikey':service};
+  if(!service.startsWith('sb_secret_'))headers.Authorization=`Bearer ${service}`;
+  return headers;
+}
+async function hmacSubject(service:string,req:Request) {
+  try {
+    const encoder=new TextEncoder();
+    const key=await crypto.subtle.importKey('raw',encoder.encode(service),{name:'HMAC',hash:'SHA-256'},false,['sign']);
+    const signed=await crypto.subtle.sign('HMAC',key,encoder.encode(`happy-coding-search:${requestIp(req)}`));
+    return Array.from(new Uint8Array(signed)).map(v=>v.toString(16).padStart(2,'0')).join('');
+  } catch { return ''; }
+}
+async function globalRateGuard(req:Request) {
+  const url=Deno.env.get('SUPABASE_URL')||'';
+  const service=backendKey();
+  if(!url||!service)return{ok:false,limited:false};
+  const subject=await hmacSubject(service,req);
+  if(!subject)return{ok:false,limited:false};
+  const rules=[{bucket:'search_minute',limit:60,seconds:60},{bucket:'search_day',limit:2000,seconds:86400}];
+  for(const rule of rules) {
+    try {
+      const response=await fetch(`${url}/rest/v1/rpc/hc_take_api_rate_limit`,{method:'POST',headers:backendHeaders(service),body:JSON.stringify({p_bucket:rule.bucket,p_subject_hash:subject,p_limit:rule.limit,p_window_seconds:rule.seconds})});
+      if(!response.ok)return{ok:false,limited:false};
+      const allowed=await response.json();
+      if(allowed!==true)return{ok:false,limited:true};
+    } catch { return{ok:false,limited:false}; }
+  }
+  return{ok:true,limited:false};
 }
 async function fetchPage(url: URL, timeoutMs = 9000) {
   const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -211,6 +252,11 @@ Deno.serve(async (req: Request) => {
   let payload: { q?: unknown } = {}; try { payload = await req.json(); } catch { return json({ error: 'invalid_json' }, 400, origin); }
   const query = cleanQuery(payload.q); if (!query) return json({ error: 'empty_query' }, 400, origin);
   const safety=safetyDecision(query);if(safety.blocked)return json({error:'blocked_query',message:safety.message,safety:{category:safety.category}},400,origin);
+  const guard=await globalRateGuard(req);
+  if(!guard.ok){
+    if(guard.limited)return json({error:'rate_limited',message:'Limite de pesquisas atingido para esta conexão. Tente novamente mais tarde.'},429,origin);
+    return json({error:'search_guard_unavailable',message:'A proteção da busca está indisponível agora. Tente novamente em alguns segundos.'},503,origin);
+  }
   const {results,diagnostics} = await search(query);
   if (!results.length) return json({ error: 'search_unavailable', message: 'Não foi possível concluir esta pesquisa agora. Tente novamente em alguns segundos.', diagnostics }, 503, origin);
   return json({ query, safeSearch: true, answer:composeAnswer(results), results }, 200, origin);
