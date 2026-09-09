@@ -11,7 +11,7 @@ function render(payload){
   queryEl.textContent=query;
   resultsEl.replaceChildren();
   if(error){statusEl.textContent=error;statusEl.hidden=false;}
-  else if(results.length){statusEl.textContent=`${results.length} resultado${results.length===1?'':'s'} do Google`;statusEl.hidden=false;}
+  else if(results.length){statusEl.textContent=`${results.length} resultado${results.length===1?'':'s'}`;statusEl.hidden=false;}
   else{statusEl.textContent='Nenhum resultado disponível para esta pesquisa.';statusEl.hidden=false;}
   for(const item of results){
     const link=document.createElement('a');link.className='result';link.href=String(item?.url||'');
