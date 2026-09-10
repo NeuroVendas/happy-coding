@@ -52,7 +52,7 @@ test('projects entry is discoverable instead of an unlabeled square',()=>{
 });
 
 test('Windows build generates and embeds the green Happy Coding face instead of Electron atom',()=>{
-  assert.equal(pkg.version,'0.10.0');
+  assert.equal(pkg.version,'0.10.1');
   assert.ok(pkg.scripts['make:win'].startsWith('node build-icon.js &&'));
   assert.equal(pkg.devDependencies['svg-to-ico'],'2.0.0');
   assert.ok(iconBuilder.includes("'..','icon.svg'"));
