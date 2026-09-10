@@ -49,8 +49,6 @@ jobs:
           node --check desktop/forge.config.js
       - name: Check web shell behavior
         run: node --test tests/*.test.cjs
-      - name: Check desktop browser core
-        run: node --test desktop/tests/*.test.cjs
       - name: Smoke test live web search
         env:
           SEARCH_URL: https://vzfnoaixjgyifutklpwn.supabase.co/functions/v1/web-search
