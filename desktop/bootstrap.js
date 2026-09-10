@@ -1,13 +1,22 @@
 'use strict';
 
-const {app,autoUpdater,dialog}=require('electron');
+const {app,autoUpdater,dialog,BaseWindow}=require('electron');
+const path=require('node:path');
 const squirrelStartup=require('electron-squirrel-startup');
 
 const UPDATE_REPO='NeuroVendas/happy-coding';
 const UPDATE_INTERVAL_MS=30*60*1000;
+const BRAND_ICON=path.join(__dirname,'assets','happy-coding.ico');
 
 function updaterFeed(){
   return `https://update.electronjs.org/${UPDATE_REPO}/${process.platform}-${process.arch}/${app.getVersion()}`;
+}
+
+function applyBrandWindowIcons(){
+  if(process.platform!=='win32')return;
+  for(const win of BaseWindow.getAllWindows()){
+    try{win.setIcon(BRAND_ICON);}catch(error){console.error('[Happy Coding branding] window icon failed',error);}
+  }
 }
 
 function scheduleUpdates(){
@@ -58,4 +67,9 @@ if(squirrelStartup){
 }else{
   app.whenReady().then(scheduleUpdates);
   require('./main');
+  app.whenReady().then(applyBrandWindowIcons);
+  app.on('browser-window-created',(_event,window)=>{
+    if(process.platform!=='win32')return;
+    try{window.setIcon(BRAND_ICON);}catch(error){console.error('[Happy Coding branding] browser window icon failed',error);}
+  });
 }
