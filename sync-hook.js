@@ -36,10 +36,16 @@
   if(!document.querySelector('link[data-hc-v010]')){
     const css=document.createElement('link');css.rel='stylesheet';css.href='v010.css';css.dataset.hcV010='1';document.head.append(css);
   }
+  // v0.11 extends the existing community with moderated HTTPS playtests and
+  // structured feedback. It remains ordinary web code with no privileged API.
+  if(!document.querySelector('link[data-hc-playtests]')){
+    const css=document.createElement('link');css.rel='stylesheet';css.href='playtests-v011.css';css.dataset.hcPlaytests='1';document.head.append(css);
+  }
   if(document.readyState==='loading'){
     document.write('<script src="search-v010.js"><\/script>');
     document.write('<script src="cloud-ai.js"><\/script>');
     document.write('<script src="v010-cleanup.js"><\/script>');
     document.write('<script type="module" src="community-v010.js"><\/script>');
+    document.write('<script type="module" src="playtests-v011.js"><\/script>');
   }
 })();
