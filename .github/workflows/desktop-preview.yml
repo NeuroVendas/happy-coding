@@ -94,18 +94,14 @@ jobs:
       - name: Run desktop tests
         working-directory: desktop
         run: npm test
-      - name: Point preview build at isolated v0.10 web stage
+      - name: Smoke real developer workspace
         working-directory: desktop
         shell: pwsh
         run: |
-          $path = 'browser-core.js'
-          $source = Get-Content $path -Raw
-          $stable = "const HOME='https://neurovendas.github.io/happy-coding/';"
-          $preview = "const HOME='https://neurovendas.github.io/happy-coding/preview-v010/';"
-          if (-not $source.Contains($stable)) { throw 'Stable HOME constant was not found; refusing preview rewrite.' }
-          Set-Content -Path $path -Value $source.Replace($stable,$preview) -NoNewline
-          $check = Get-Content $path -Raw
-          if (-not $check.Contains($preview)) { throw 'Preview HOME rewrite failed.' }
+          npx --no-install electron developer-smoke.cjs
+          $smokeExit = $LASTEXITCODE
+          if (Test-Path 'developer-smoke.log') { Get-Content 'developer-smoke.log' }
+          exit $smokeExit
       - name: Package Windows preview
         working-directory: desktop
         run: npm run make:win
@@ -122,7 +118,7 @@ jobs:
           Write-Host 'Packaged Happy Coding stayed alive through startup smoke.'
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: Happy-Coding-0.10.0-preview
+          name: Happy-Coding-0.11.0-preview
           path: desktop/out/make/**/*
           if-no-files-found: error
           retention-days: 7

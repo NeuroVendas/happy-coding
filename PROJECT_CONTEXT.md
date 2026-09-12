@@ -2,6 +2,12 @@
 
 > Leia este arquivo antes de alterar o projeto. Continue o produto existente; não reinvente nem redesenhe.
 
+## Atualização em desenvolvimento — v0.11.0
+
+Base verificada: main `6502cd83b1b50d61a6c098c5611401e943082b56`, release desktop v0.10.1. As seções históricas abaixo contêm versões antigas.
+
+Branch `feature/developer-mode-v011`: Modo Desenvolvedor integrado à janela, DevTools, três ambientes de teste isolados, diagnóstico básico, capturas/diff, relatos revisáveis, referências por projeto, cliente API e gravação inicial localhost. Ferramentas rápidas JSON/cor/regex/foco retiradas do shell web. Tema e contas anteriores preservados. Consulte `desktop/DEVELOPER_MODE.md` para os comportamentos e limites; não tratar a prévia como implementação completa de colaboração/IA autônoma. Sem migrações Supabase ou publicação de release nesta etapa.
+
 ## Projeto correto
 
 - Nome: **Happy Coding =]**

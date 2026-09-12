@@ -9,6 +9,8 @@ const {cleanUrl,cleanLibraryTitle,normalizeLibrary,addHistory,toggleBookmark}=re
 const {normalizeSession,buildSessionSnapshot}=require('./session-core');
 const {cleanSearchQuery,logicalSearchUrl,googleSearchUrl,normalizeGoogleResults,googleBlocked}=require('./search-core');
 const {createWorkspaceService}=require('./workspace-service');
+const {createDeveloperService}=require('./developer-service');
+let developer=null;
 let workspaces=null;
 
 const CHROME_COLLAPSED=104;
@@ -42,6 +44,7 @@ function resize(){
   if(!win)return;
   const bounds=win.getContentBounds();
   chromeView?.setBounds({x:0,y:0,width:bounds.width,height:chromeHeight});
+  if(developer?.layout())return;
   for(const tab of tabs.values())tab.view.setBounds({x:0,y:chromeHeight,width:bounds.width,height:Math.max(0,bounds.height-chromeHeight)});
 }
 function setPanelOpen(open){chromeHeight=open?CHROME_EXPANDED:CHROME_COLLAPSED;resize();return true;}
@@ -96,7 +99,7 @@ function activateTab(id){
   const tab=tabs.get(id);if(!tab)return false;
   activeTabId=id;
   for(const item of tabs.values())item.view.setVisible(item.id===id);
-  tab.view.webContents.focus();sendState();sendLibrary();if(!restoringSession)saveSession(false);return true;
+  tab.view.webContents.focus();resize();sendState();sendLibrary();if(!restoringSession)saveSession(false);return true;
 }
 function handleShortcut(tab,event,input){
   if(input.type!=='keyDown')return;
@@ -115,6 +118,7 @@ function handleShortcut(tab,event,input){
 }
 function configureTab(tab){
   const wc=tab.view.webContents;
+  developer?.attach(wc);
   wc.setWindowOpenHandler(({url})=>{createTab(url,true);return{action:'deny'};});
   wc.on('will-navigate',(event,url)=>{
     if(tab.kind==='search'&&isSearchFile(url))return;
@@ -219,6 +223,7 @@ app.whenReady().then(()=>{
   searchSession=session.fromPartition(SEARCH_PARTITION);searchSession.setPermissionRequestHandler((_wc,_permission,callback)=>callback(false));searchSession.setPermissionCheckHandler(()=>false);searchSession.on('will-download',event=>event.preventDefault());
   session.defaultSession.setPermissionRequestHandler((_wc,_permission,callback)=>callback(false));session.defaultSession.setPermissionCheckHandler(()=>false);session.defaultSession.on('will-download',registerDownload);
   win=new BaseWindow({width:1280,height:820,minWidth:760,minHeight:520,title:'Happy Coding =]'});
+  developer=createDeveloperService({win,currentTab,getTabs:()=>[...tabs.values()],top:()=>chromeHeight,resize,notice,openUrl:url=>createTab(url,true),userData:app.getPath('userData')});
   workspaces=createWorkspaceService({userData:app.getPath('userData'),getTabs:()=>sessionEntries().map(item=>({...item,title:tabs.get(item.id)?.title||item.url})),openUrl:url=>{if(!win)throw new Error('Reabra o navegador para abrir os links do espaço.');win.show();win.focus();return createTab(url,true);}});
   chromeView=new WebContentsView({webPreferences:{preload:path.join(__dirname,'preload.js'),nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true}});
   win.contentView.addChildView(chromeView);chromeView.webContents.loadFile(path.join(__dirname,'chrome.html'));chromeView.webContents.on('did-finish-load',()=>{sendState();sendDownloads();sendLibrary();});
@@ -227,7 +232,7 @@ app.whenReady().then(()=>{
   else createTab(HOME,true);
   restoringSession=false;saveSession(false);resize();win.on('resize',resize);
   win.on('close',()=>{restoringSession=false;saveSession(true);});
-  win.on('closed',()=>{workspaces?.close();for(const tab of tabs.values())if(!tab.view.webContents.isDestroyed())tab.view.webContents.close();tabs.clear();if(!chromeView?.webContents.isDestroyed())chromeView.webContents.close();win=null;chromeView=null;activeTabId=null;});
+  win.on('closed',()=>{developer?.close();developer=null;workspaces?.close();for(const tab of tabs.values())if(!tab.view.webContents.isDestroyed())tab.view.webContents.close();tabs.clear();if(!chromeView?.webContents.isDestroyed())chromeView.webContents.close();win=null;chromeView=null;activeTabId=null;});
 });
 app.on('before-quit',()=>{workspaces?.close();if(win)saveSession(true);});
 app.on('window-all-closed',()=>{if(process.platform!=='darwin')app.quit();});
@@ -251,3 +256,5 @@ ipcMain.handle('hc:bookmark-toggle',event=>isChromeSender(event.sender)&&toggleC
 ipcMain.handle('hc:bookmark-remove',(event,id)=>isChromeSender(event.sender)&&removeBookmark(id));
 ipcMain.handle('hc:history-clear',event=>isChromeSender(event.sender)&&clearHistory());
 ipcMain.handle('hc:open-workspaces',event=>isChromeSender(event.sender)&&event.senderFrame===chromeView.webContents.mainFrame&&workspaces?.open());
+ipcMain.handle('hc:developer-toggle',event=>isChromeSender(event.sender)&&event.senderFrame===chromeView.webContents.mainFrame&&developer?.toggle());
+ipcMain.handle('hc:devtools',event=>isChromeSender(event.sender)&&event.senderFrame===chromeView.webContents.mainFrame&&developer?.devtools());
