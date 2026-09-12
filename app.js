@@ -17,8 +17,6 @@ const baseProjects=[
 ];
 
 let warningUrl=null;
-let focusSeconds=1500;
-let focusTimer=null;
 let currentProjectId=null;
 let deferredInstallPrompt=null;
 let localAI=null;
@@ -222,19 +220,6 @@ $('clearHistoryView').addEventListener('click',()=>{if(confirm('Apagar o histór
 $('warningCancel').addEventListener('click',()=>{warningUrl=null;$('warningModal').classList.add('hidden')});
 $('warningContinue').addEventListener('click',()=>{const u=warningUrl;warningUrl=null;$('warningModal').classList.add('hidden');if(u){addHistory(u);window.open(u,'_blank','noopener')}});
 document.querySelectorAll('[data-external]').forEach(btn=>btn.addEventListener('click',()=>navigate(btn.dataset.external)));
-document.querySelectorAll('[data-tool]').forEach(btn=>btn.addEventListener('click',()=>{
-  showView('tools');
-  const target=$({json:'jsonInput',color:'colorPicker',regex:'regexPattern',focus:'focusStart'}[btn.dataset.tool]);
-  target?.focus();target?.scrollIntoView({behavior:'smooth',block:'center'});
-}));
-
-$('formatJson').addEventListener('click',()=>{try{$('jsonInput').value=JSON.stringify(JSON.parse($('jsonInput').value),null,2);$('jsonStatus').textContent='JSON válido ✓'}catch{$('jsonStatus').textContent='JSON inválido'}});
-$('colorPicker').addEventListener('input',e=>{const v=e.target.value.toUpperCase();$('colorPreview').style.background=v;$('colorValue').textContent=v});
-$('testRegex').addEventListener('click',()=>{try{const re=new RegExp($('regexPattern').value,'gi'),m=$('regexText').value.match(re)||[];$('regexStatus').textContent=`${m.length} correspondência(s)`}catch{$('regexStatus').textContent='Expressão inválida'}});
-function renderClock(){const m=String(Math.floor(focusSeconds/60)).padStart(2,'0'),s=String(focusSeconds%60).padStart(2,'0');$('focusClock').textContent=`${m}:${s}`;}
-$('focusStart').addEventListener('click',()=>{if(focusTimer){clearInterval(focusTimer);focusTimer=null;$('focusStart').textContent='Iniciar';return}$('focusStart').textContent='Pausar';focusTimer=setInterval(()=>{if(focusSeconds>0){focusSeconds--;renderClock()}else{clearInterval(focusTimer);focusTimer=null;$('focusStart').textContent='Iniciar';toast('Focus run concluído! =]')}},1000)});
-$('focusReset').addEventListener('click',()=>{if(focusTimer)clearInterval(focusTimer);focusTimer=null;focusSeconds=1500;renderClock();$('focusStart').textContent='Iniciar'});
-
 function appendChat(role,text,id=''){
   const p=document.createElement('p');
   p.className=role==='user'?'user':'bot';

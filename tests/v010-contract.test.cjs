@@ -98,7 +98,7 @@ test('public search uses the same backend-only global quota guard',()=>{
 test('desktop dependency graph is locked and both Windows workflows use npm ci',()=>{
   assert.equal(desktopLock.lockfileVersion,3);
   assert.equal(desktopLock.name,'happy-coding-desktop');
-  assert.equal(desktopLock.version,'0.10.0');
+  assert.equal(desktopLock.version,'0.11.0');
   for(const workflow of [previewWorkflow,releaseWorkflow]){
     assert.match(workflow,/npm ci --no-audit --no-fund/);
     assert.equal(/npm install --no-audit --no-fund/.test(workflow),false);

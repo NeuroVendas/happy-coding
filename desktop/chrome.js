@@ -96,6 +96,7 @@ document.getElementById('newTab').addEventListener('click',()=>window.happyDeskt
 restoreTabBtn.addEventListener('click',()=>window.happyDesktop.restoreTab());
 accountBtn.addEventListener('click',()=>window.happyDesktop.navigate(ACCOUNT));
 document.getElementById('workspacesBtn').addEventListener('click',()=>window.happyDesktop.openWorkspaces());
+document.getElementById('developerBtn').addEventListener('click',()=>window.happyDesktop.toggleDeveloper());
 bookmarkBtn.addEventListener('click',()=>window.happyDesktop.toggleBookmark());downloadsBtn.addEventListener('click',()=>setPanel(activePanel==='downloads'?null:'downloads'));libraryBtn.addEventListener('click',()=>setPanel(activePanel==='library'?null:'library'));
 document.getElementById('clearDownloads').addEventListener('click',()=>window.happyDesktop.clearFinishedDownloads());
 favoritesTab.addEventListener('click',()=>{libraryMode='favorites';renderLibraryList();});historyTab.addEventListener('click',()=>{libraryMode='history';renderLibraryList();});clearHistory.addEventListener('click',()=>{if(confirm('Limpar todo o histórico local deste navegador?'))window.happyDesktop.clearHistory();});
@@ -103,6 +104,8 @@ window.happyDesktop.onBrowserState(render);window.happyDesktop.onDownloadsState(
 
 document.addEventListener('keydown',event=>{
   const key=event.key.toLowerCase();const mod=navigator.platform.toLowerCase().includes('mac')?event.metaKey:event.ctrlKey;
+  if(event.key==='F12'||(mod&&event.shiftKey&&key==='i')){event.preventDefault();window.happyDesktop.devtools();return;}
+  if(mod&&event.shiftKey&&key==='d'){event.preventDefault();window.happyDesktop.toggleDeveloper();return;}
   if(event.key==='Escape'&&activePanel){event.preventDefault();setPanel(null);return;}
   if(mod&&key==='j'){event.preventDefault();setPanel(activePanel==='downloads'?null:'downloads');return;}
   if(mod&&key==='h'){event.preventDefault();libraryMode='history';renderLibraryList();setPanel('library');return;}
