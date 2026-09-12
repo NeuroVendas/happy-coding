@@ -7,7 +7,7 @@ create table if not exists public.hc_playtests (
   creator_name text not null check (char_length(btrim(creator_name)) between 2 and 40),
   project_name text not null check (char_length(btrim(project_name)) between 1 and 120),
   version_label text not null check (char_length(btrim(version_label)) between 1 and 80),
-  project_url text not null check (char_length(project_url) between 9 and 2048 and project_url ~ '^https://[^[:space:]]+$'),
+  project_url text not null constraint hc_playtests_project_url_check check (char_length(project_url) between 9 and 2048 and project_url ~ '^https://[^[:space:]]+$' and project_url !~* '^https://([^/]*@|([a-z0-9-]+\.)*localhost([:/]|$)|127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.|\[)'),
   feedback_prompt text not null check (char_length(btrim(feedback_prompt)) between 1 and 1000),
   instructions text not null default '' check (char_length(instructions) <= 4000),
   content_warning boolean not null default false,

@@ -22,6 +22,9 @@ test('v0.11 web shell loads playtests and caches their assets',()=>{
 test('playtest publication is HTTPS-link based, moderated and does not upload builds',()=>{
   assert.ok(playtests.includes("from('hc_playtests')"));
   assert.ok(playtests.includes("protocol!=='https:'"));
+  assert.ok(playtests.includes('parsed.username||parsed.password'));
+  assert.ok(playtests.includes("host.endsWith('.localhost')"));
+  assert.ok(sql.includes("project_url !~* '^https://"));
   assert.ok(playtests.includes("status:'pending'"));
   assert.ok(playtests.includes("'published'"));
   assert.ok(playtests.includes('O Happy Coding não hospeda o build nesta fase'));

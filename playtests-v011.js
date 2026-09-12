@@ -37,6 +37,7 @@
   function statusLine(form){const p=el('p','form-status');p.setAttribute('role','status');form.append(p);return p;}
   function localProfileName(){try{return JSON.parse(localStorage.getItem('happyCoding.profile.v1')||'{}')?.name||'';}catch{return'';}}
   function localProject(){try{return JSON.parse(localStorage.getItem('happyCoding.projects.v1')||'[]')?.[0]||null;}catch{return null;}}
+  function publicPlaytestUrl(raw){try{const parsed=new URL(String(raw||'').trim());const host=parsed.hostname.toLowerCase().replace(/^\[|\]$/g,'');if(parsed.protocol!=='https:'||parsed.username||parsed.password)return null;if(host==='localhost'||host.endsWith('.localhost')||host.includes(':')||/^127\./.test(host)||/^10\./.test(host)||/^192\.168\./.test(host)||/^172\.(1[6-9]|2[0-9]|3[01])\./.test(host))return null;return parsed;}catch{return null;}}
   async function publicName(client,current){
     if(!current?.user?.id)return'';
     const {data}=await client.from('hc_public_profiles').select('display_name').eq('user_id',current.user.id).maybeSingle();
@@ -100,7 +101,7 @@
     form.append(el('p','','Não publique senhas, tokens, builds executáveis ou dados pessoais. Apenas o link e os textos acima serão salvos nesta publicação.'));
     const submit=button('Enviar para revisão',()=>{},'primary-btn');submit.type='submit';form.append(submit);const status=statusLine(form);
     form.addEventListener('submit',async event=>{
-      event.preventDefault();if(!form.reportValidity())return;let parsed;try{parsed=new URL(url.value.trim());}catch{status.textContent='Informe um link HTTPS válido.';return;}if(parsed.protocol!=='https:'){status.textContent='O link do playtest precisa usar HTTPS.';return;}
+      event.preventDefault();if(!form.reportValidity())return;const parsed=publicPlaytestUrl(url.value);if(!parsed){status.textContent='Informe um link público HTTPS, sem credenciais embutidas, localhost ou rede privada.';return;}
       submit.disabled=true;status.textContent='Enviando…';
       try{const {error}=await client.from('hc_playtests').insert({creator_id:current.user.id,creator_name:name.value.trim(),project_name:project.value.trim(),version_label:version.value.trim(),project_url:parsed.href,feedback_prompt:goal.value.trim(),instructions:instructions.value.trim(),content_warning:warning.checked,status:'pending'});if(error)throw error;d.close();window.toast?.('Playtest enviado para revisão.');loadPlaytests();}catch(error){status.textContent=errorMessage(error);}finally{submit.disabled=false;}
     });
