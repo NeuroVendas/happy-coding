@@ -20,7 +20,7 @@ async function run(){
   progress('Local fixture ready');
   win=new BaseWindow({width:1440,height:900,show:true});
   const original=new WebContentsView({webPreferences:{sandbox:true,contextIsolation:true,nodeIntegration:false}});win.contentView.addChildView(original);await original.webContents.loadURL(url);
-  const tab={view:original};service=createDeveloperService({win,currentTab:()=>tab,getTabs:()=>[tab],top:()=>100,resize:()=>service.layout(),notice:()=>{},openUrl:()=>{},userData:dir});service.attach(original.webContents);service.toggle();
+  const tab={view:original};service=createDeveloperService({win,currentTab:()=>tab,getTabs:()=>[tab],top:()=>100,resize:()=>service.layout(),notice:()=>{},openUrl:()=>{},userData:dir,trace:progress});service.attach(original.webContents);service.toggle();
   const panel=win.contentView.children.find(v=>v!==original);await once(panel.webContents,'did-finish-load');progress('Panel loaded');
   const invoke=(action,value={})=>panel.webContents.executeJavaScript(`window.happyDeveloper.call(${JSON.stringify(action)},${JSON.stringify(value)})`);
   assert.equal(await original.webContents.executeJavaScript('typeof window.happyDeveloper'),'undefined');

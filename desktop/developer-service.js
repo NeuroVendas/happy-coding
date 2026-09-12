@@ -8,7 +8,7 @@ const core=require('./developer-core');
 const scripts=require('./developer-scripts');
 const WORLD=1101;
 const secure={nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true,allowRunningInsecureContent:false};
-function createDeveloperService({win,currentTab,getTabs,top,resize,notice,openUrl,userData}){
+function createDeveloperService({win,currentTab,getTabs,top,resize,notice,openUrl,userData,trace=()=>{}}){
   const file=path.join(userData,'developer-projects.json');
   const panelUrl=pathToFileURL(path.join(__dirname,'developer.html')).href;
   let data={projects:[],tests:[]};
@@ -16,6 +16,7 @@ function createDeveloperService({win,currentTab,getTabs,top,resize,notice,openUr
   let panel=null,enabled=false,previews=[],mode='page',selected=0,sync=false,syncBusy=false,busy=false,destroyed=false;
   let events=[],recording=null,recordBusy=false,before=null,after=null,elapsed=0,playStarted=0;
   const attached=new WeakSet();
+  const ready=new WeakSet();
   const ownedSessions=new Set();
   const network={};
   const apiSession=session.fromPartition(`hc-dev-api-${randomUUID()}`);
@@ -67,7 +68,7 @@ function createDeveloperService({win,currentTab,getTabs,top,resize,notice,openUr
     const b=win.getContentBounds(),y=top(),height=Math.max(1,b.height-y),side=Math.min(380,Math.floor(b.width*.48)),width=b.width-side;
     panel.setBounds({x:width,y,width:side,height});
     for(const tab of getTabs()){tab.view.setVisible(!previews.length&&tab===currentTab());if(tab===currentTab())tab.view.setBounds({x:0,y,width,height});}
-    previews.forEach((view,i)=>{const slot=Math.floor(width/previews.length);view.setBounds({x:i*slot,y,width:i===previews.length-1?width-i*slot:slot,height});view.setVisible(true);if(mode==='responsive')view.webContents.enableDeviceEmulation({screenPosition:'desktop',screenSize:{width:0,height:0},deviceScaleFactor:0,viewPosition:{x:0,y:0},viewSize:{width:[390,768,1440][i],height:900},scale:Math.min(1,slot/[390,768,1440][i])});});
+    previews.forEach((view,i)=>{const slot=Math.floor(width/previews.length);view.setBounds({x:i*slot,y,width:i===previews.length-1?width-i*slot:slot,height});view.setVisible(true);if(mode==='responsive'&&ready.has(view))view.webContents.enableDeviceEmulation({screenPosition:'desktop',screenSize:{width:[390,768,1440][i],height:900},deviceScaleFactor:0,viewPosition:{x:0,y:0},viewSize:{width:[390,768,1440][i],height:900},scale:Math.min(1,slot/[390,768,1440][i])});});
     return true;
   }
   function closePreviews(){
@@ -77,12 +78,14 @@ function createDeveloperService({win,currentTab,getTabs,top,resize,notice,openUr
     for(const tab of getTabs())if(!tab.view.webContents.isDestroyed())tab.view.setVisible(tab===currentTab());
   }
   async function makePreviews(kind,raw){
+    trace('Creating preview environments');
     const url=core.target(raw);if(!url)throw Error('Endereço inválido. Use HTTPS ou localhost.');
     closePreviews();mode=kind;
     // A new temporary partition per environment: no cookies from normal browsing.
     const group=randomUUID();
     previews=Array.from({length:3},(_,i)=>{
       const s=session.fromPartition(`hc-dev-${group}-${i}`);harden(s);ownedSessions.add(s);
+      trace(`Session ${i} created`);
       const v=new WebContentsView({webPreferences:{...secure,session:s}}),w=v.webContents;attach(w);
       w.setWindowOpenHandler(({url:dest})=>{const safe=core.target(dest);if(safe)w.loadURL(safe).catch(()=>{});return{action:'deny'};});
       for(const event of ['will-navigate','will-redirect'])w.on(event,(e,dest)=>{if(!core.target(dest))e.preventDefault();});
@@ -92,10 +95,10 @@ function createDeveloperService({win,currentTab,getTabs,top,resize,notice,openUr
         if(recording?.w===w){recording.steps.push({type:'navigate',url:core.safeUrl(dest)});recording.steps=recording.steps.slice(0,30);}
         emit();
       });
-      w.on('did-finish-load',()=>{if(recording?.w===w)exec(w,scripts.RECORD_START).catch(()=>{});});
+      w.on('did-finish-load',()=>{ready.add(v);resize();if(recording?.w===w)exec(w,scripts.RECORD_START).catch(()=>{});});
       win.contentView.addChildView(v);return v;
     });
-    resize();await Promise.allSettled(previews.map(v=>v.webContents.loadURL(url)));emit();return state();
+    trace('Laying out previews before navigation');resize();trace('Loading preview fixture');await Promise.allSettled(previews.map(v=>v.webContents.loadURL(url)));emit();return state();
   }
   async function drain(){if(!recording||recordBusy)return;const r=recording;recordBusy=true;try{const values=await exec(r.w,scripts.RECORD_DRAIN);if(recording===r)r.steps=core.steps([...r.steps,...(Array.isArray(values)?values:[])]);}catch{}finally{recordBusy=false;}}
   function stopRecording(){if(recording){const r=recording;recording=null;if(!r.w.isDestroyed())exec(r.w,scripts.RECORD_STOP).catch(()=>{});return r;}return null;}
