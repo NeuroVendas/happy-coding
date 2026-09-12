@@ -74,6 +74,7 @@ function createDeveloperService({win,currentTab,getTabs,top,resize,notice,openUr
     stopRecording();
     for(const v of previews){if(!win.isDestroyed())win.contentView.removeChildView(v);if(!v.webContents.isDestroyed()){const s=v.webContents.session;s.disableNetworkEmulation();v.webContents.close();s.closeAllConnections().catch(()=>{});s.clearStorageData().catch(()=>{});ownedSessions.delete(s);}}
     previews=[];selected=0;mode='page';sync=false;for(const key of Object.keys(network))delete network[key];
+    for(const tab of getTabs())if(!tab.view.webContents.isDestroyed())tab.view.setVisible(tab===currentTab());
   }
   async function makePreviews(kind,raw){
     const url=core.target(raw);if(!url)throw Error('Endereço inválido. Use HTTPS ou localhost.');
@@ -154,6 +155,7 @@ function createDeveloperService({win,currentTab,getTabs,top,resize,notice,openUr
   ipcMain.handle('hc:developer',async(event,action,value={})=>{
     if(!core.authorized(event,panel,panelUrl))throw Error('Acesso negado.');
     if(!Object.hasOwn(actions,action))throw Error('Ação desconhecida.');
+    if(action==='state')return{ok:true,value:state()};
     if(busy&&action!=='state')return{ok:false,error:'Aguarde a operação atual.'};
     busy=true;try{return{ok:true,value:await actions[action](value||{})};}catch(e){return{ok:false,error:core.text(e.message,300)};}finally{busy=false;}
   });

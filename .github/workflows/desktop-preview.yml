@@ -96,7 +96,12 @@ jobs:
         run: npm test
       - name: Smoke real developer workspace
         working-directory: desktop
-        run: npx --no-install electron developer-smoke.cjs
+        shell: pwsh
+        run: |
+          npx --no-install electron developer-smoke.cjs
+          $smokeExit = $LASTEXITCODE
+          if (Test-Path 'developer-smoke.log') { Get-Content 'developer-smoke.log' }
+          exit $smokeExit
       - name: Package Windows preview
         working-directory: desktop
         run: npm run make:win
