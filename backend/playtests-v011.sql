@@ -66,7 +66,7 @@ using (
   or exists (
     select 1 from public.hc_admin_members a
     where a.user_id=(select auth.uid())
-      and (select auth.jwt()->>'aal')='aal2'
+      and ((select auth.jwt())->>'aal')='aal2'
   )
 );
 
@@ -77,8 +77,8 @@ to authenticated
 with check (
   creator_id=(select auth.uid())
   and status='pending'
-  and coalesce((select auth.jwt()->>'is_anonymous'),'false')='false'
-  and coalesce((select auth.jwt()->>'email'),'')<>''
+  and coalesce(((select auth.jwt())->>'is_anonymous'),'false')='false'
+  and coalesce(((select auth.jwt())->>'email'),'')<>''
 );
 
 drop policy if exists hc_playtests_delete_self on public.hc_playtests;
@@ -95,14 +95,14 @@ using (
   exists (
     select 1 from public.hc_admin_members a
     where a.user_id=(select auth.uid())
-      and (select auth.jwt()->>'aal')='aal2'
+      and ((select auth.jwt())->>'aal')='aal2'
   )
 )
 with check (
   exists (
     select 1 from public.hc_admin_members a
     where a.user_id=(select auth.uid())
-      and (select auth.jwt()->>'aal')='aal2'
+      and ((select auth.jwt())->>'aal')='aal2'
   )
 );
 
@@ -119,7 +119,7 @@ using (
   or exists (
     select 1 from public.hc_admin_members a
     where a.user_id=(select auth.uid())
-      and (select auth.jwt()->>'aal')='aal2'
+      and ((select auth.jwt())->>'aal')='aal2'
   )
 );
 
@@ -130,8 +130,8 @@ to authenticated
 with check (
   tester_id=(select auth.uid())
   and status='open'
-  and coalesce((select auth.jwt()->>'is_anonymous'),'false')='false'
-  and coalesce((select auth.jwt()->>'email'),'')<>''
+  and coalesce(((select auth.jwt())->>'is_anonymous'),'false')='false'
+  and coalesce(((select auth.jwt())->>'email'),'')<>''
   and exists (
     select 1 from public.hc_playtests p
     where p.id=playtest_id and p.status='published'
@@ -150,7 +150,7 @@ using (
   or exists (
     select 1 from public.hc_admin_members a
     where a.user_id=(select auth.uid())
-      and (select auth.jwt()->>'aal')='aal2'
+      and ((select auth.jwt())->>'aal')='aal2'
   )
 )
 with check (
@@ -161,7 +161,7 @@ with check (
   or exists (
     select 1 from public.hc_admin_members a
     where a.user_id=(select auth.uid())
-      and (select auth.jwt()->>'aal')='aal2'
+      and ((select auth.jwt())->>'aal')='aal2'
   )
 );
 
